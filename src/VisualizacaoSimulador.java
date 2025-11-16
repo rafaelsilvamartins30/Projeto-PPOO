@@ -3,16 +3,16 @@ import javax.swing.*;
 import java.util.HashMap;
 
 /**
- * Uma visualização gráfica da grade da simulação.
- * A visualização exibe um retângulo colorido para cada posição,
- * representando seu conteúdo. Utiliza uma cor de fundo padrão.
- * As cores para cada tipo de espécie podem ser definidas usando o
- * método definirCor.
+ * Fornece uma visualização gráfica de um simulador de predador e presa.
+ * A visualização exibe o estado atual do campo, incluindo as populações.
+ * Permite definir cores para diferentes classes de animais.
+ * Também verifica se a simulação ainda é viável (ou seja, se há mais de uma espécie viva).
+ * Pode reiniciar a visualização para um novo início de simulação. 
  * 
  * @author David J. Barnes e Michael Kolling
  * @version 2002-04-23 (traduzido)
  */
-public class VisualizacaoSimulador extends JFrame
+public class VisualizacaoSimulador extends JFrame implements Desenhavel
 {
     // Cor usada para locais vazios.
     private static final Color COR_VAZIA = Color.white;
@@ -61,7 +61,8 @@ public class VisualizacaoSimulador extends JFrame
      * @param classeAnimal A classe do animal.
      * @param cor A cor correspondente.
      */
-    public void definirCor(Class classeAnimal, Color cor)
+    @Override
+    public void definirCor(Class<?> classeAnimal, Color cor)
     {
         cores.put(classeAnimal, cor);
     }
@@ -88,6 +89,7 @@ public class VisualizacaoSimulador extends JFrame
      * @param passo Qual iteração (passo) está sendo exibida.
      * @param campo O estado atual do campo.
      */
+    @Override
     public void mostrarStatus(int passo, Campo campo)
     {
         if(!isVisible())
@@ -121,11 +123,23 @@ public class VisualizacaoSimulador extends JFrame
      * @param campo O campo atual.
      * @return Verdadeiro se houver mais de uma espécie viva.
      */
+    @Override
     public boolean ehViavel(Campo campo)
     {
         return estatisticas.ehViavel(campo);
     }
     
+    /**
+     * Reinicia a visualização.
+     */
+    @Override
+    public void reiniciar()
+    {
+        estatisticas.reiniciar();
+        visaoCampo.prepararPintura();
+        visaoCampo.repaint();
+    }
+
     /**
      * Fornece uma visualização gráfica de um campo retangular.
      * Esta é uma classe interna que define um componente personalizado

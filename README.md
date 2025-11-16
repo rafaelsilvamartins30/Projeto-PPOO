@@ -1,94 +1,71 @@
-# 🦊🐇 Simulação de Ecossistema: Raposas e Coelhos (Java)
+🔧 Refatoração da Visualização e Desacoplamento do Simulador
 
-Este projeto é uma simulação orientada a objetos de um **ecossistema** com **raposas** e **coelhos**, que interagem em um campo bidimensional. Baseado no modelo clássico de Barnes & Kölling e **traduzido/adaptado para português**.
+Nesta versão do projeto, realizamos uma refatoração estrutural para melhorar o desacoplamento entre a lógica da simulação e o mecanismo de visualização. Essa mudança segue os princípios apresentados no livro Objects First with Java (Barnes & Kölling), especialmente no capítulo que introduz SimulatorView.
 
----
+✔ Criação da interface Desenhavel
 
-## 🎯 Objetivos didáticos
+Foi criada a interface Desenhavel, responsável por definir um contrato mínimo para qualquer forma de visualização da simulação.
+A interface possui os métodos:
 
-- Praticar **POO**: abstração, encapsulamento, herança e polimorfismo.  
-- Usar **interfaces** para contratos comportamentais.  
-- Trabalhar com **coleções Java** (List, HashMap, Iterator).  
-- Simular dinâmicas **predador–presa** (nascimento, envelhecimento, morte, reprodução e alimentação).
+definirCor(Class<?> classe, Color cor)
 
----
+mostrarStatus(int passo, Campo campo)
 
-## 🧩 Estrutura das classes
+ehViavel(Campo campo)
 
-```
-src/
-├── Animal.java                # Classe abstrata base (idade, vida, reprodução, localização)
-├── Ator.java                  # Interface: define agir(...) e estaVivo()
-├── Campo.java                 # Grade 2D e utilidades de vizinhança/ocupação
-├── Coelho.java                # Presa: movimenta, reproduz e pode morrer por superlotação/idade
-├── Contador.java              # Utilitário de contagem por espécie
-├── Desenhavel.java            # Interface opcional para elementos desenháveis (GUI)
-├── EstatisticasCampo.java     # Coleta e exibe estatísticas de população/viabilidade
-├── Localizacao.java           # Par (linha, coluna) com equals/hashCode
-├── Raposa.java                # Predador: caça coelhos, sente fome e reproduz
-├── Simulador.java             # Loop principal da simulação (popular, passos, troca de campos)
-├── VisualizacaoSimulador.java # GUI (Swing/AWT) para desenhar o campo e mostrar estatísticas
-└── Principal.java             # Ponto de entrada (main)
-```
+reiniciar()
 
-### Principais responsabilidades
+Esses métodos representam tudo que o simulador precisa solicitar a uma view, sem conhecer sua implementação concreta.
 
-- **Animal**: base para espécies (idade, vida, reprodução probabilística, localização).  
-- **Ator**: contrato para `agir(...)` durante um passo da simulação.  
-- **Campo**: mantém matriz de objetos e fornece vizinhanças (adjacentes livres/aleatórias).  
-- **Coelho**: define parâmetros de reprodução/idade máxima e movimento simples.  
-- **Raposa**: além de reproduzir/envelhecer, **caça coelhos** e tem **fome** que leva à morte.  
-- **EstatisticasCampo**: contabiliza por classe e testa viabilidade (mais de uma espécie viva).  
-- **VisualizacaoSimulador**: janela Swing que colore cada célula por espécie e mostra contagens.  
-- **Simulador**: orquestra a simulação: popula o campo (probabilidades), itera passos, atualiza GUI.  
-- **Principal**: cria `Simulador` e executa `simular(100)` por padrão.
+✔ VisualizacaoSimulador agora implementa Desenhavel
 
----
+A classe gráfica padrão (VisualizacaoSimulador) passou a:
 
+implementar a interface Desenhavel
 
-## 🔧 Parâmetros principais da simulação
+garantir a presença de todos os métodos definidos no contrato
 
-- **Dimensões do campo**: 50 x 50 (padrão).  
-- **Prob. de criação**: raposa = 0.02; coelho = 0.08.  
-- **Reprodução** e **limites de idade** são **específicos por espécie**:
-  - Coelho: idade reprodutiva = 5; idade máxima = 50; prob. reprodução = 0.15; ninhada ≤ 5.  
-  - Raposa: idade reprodutiva = 10; idade máxima = 150; prob. reprodução = 0.09; ninhada ≤ 3; fome.
+continuar funcionando como a visualização padrão por meio da interface
 
-> Esses parâmetros estão codificados nas classes das espécies e podem ser ajustados para experimentar diferentes dinâmicas.
+Essa alteração permite que outras visualizações sejam adicionadas futuramente, como uma visualização textual ou gráfica alternativa, sem modificar o Simulador.
 
----
+✔ Simulador agora depende apenas da interface Desenhavel
 
-## 🧪 Como alterar o número de passos
+A classe Simulador foi modificada para não conhecer mais diretamente VisualizacaoSimulador.
 
-Na classe **Principal.java**:
-```java
-public class Principal {
-  public static void main(String[] args) {
-    Simulador simulador = new Simulador();
-    simulador.simular(200); // altere 100 -> 200, 500, etc.
-  }
-}
-```
+Principais alterações:
 
----
+O atributo interno deixou de ser um VisualizacaoSimulador e passou a ser um Desenhavel.
 
-## 🖼️ Interface (GUI)
+O construtor foi refatorado para aceitar um objeto Desenhavel como parâmetro.
 
-- A **VisualizacaoSimulador** abre uma janela com:
-  - **Passo** (iteração atual);
-  - **População** por espécie;
-  - Um **grid** onde cada célula é colorida conforme a espécie presente (ou branco se vazia).
-- As cores das classes são registradas em `Simulador` via `visualizacao.definirCor(...)`.
+O construtor padrão do simulador instancia a visualização gráfica, mas a armazena como interface.
 
----
+Todas as chamadas a métodos visuais (mostrarStatus, ehViavel, definirCor, etc.) agora usam apenas o tipo abstrato Desenhavel.
 
-## 👥 Autoria e créditos
+Essa mudança atende ao princípio Programar para interfaces, não implementações, e torna o simulador extensível e mais fácil de manter.
 
-- Adaptação/tradução para PT-BR e organização do código por estudantes da **UFLA (SI)**.  
-- Baseado no projeto didático de **David J. Barnes & Michael Kölling**.
+✔ Possibilidade de múltiplas visualizações
 
----
+Com o desacoplamento implementado, agora é possível criar outras visualizações da simulação sem alterar nenhuma linha de código do simulador.
 
-## 📄 Licença
+Exemplo:
+VisualizacaoTexto implements Desenhavel 
+(Não implementado)
+(exibição da simulação no console)
 
-Uso **educacional**. Verifique a política da sua instituição antes de redistribuir.
+O simulador pode receber qualquer implementação de Desenhavel:
+
+Simulador sim = new Simulador(50, 70, new VisualizacaoTexto());
+
+✔ Benefícios da Refatoração
+
+🔄 Substituição dinâmica da view sem alterar o simulador
+
+📦 Código mais modular e coeso
+
+🧪 Facilita testes automatizados usando uma visualização "fake"
+
+🧩 Permite múltiplas views simultâneas, se necessário
+
+📝 Segue o mesmo padrão ensinado no livro, facilitando alinhamento com o professor

@@ -36,7 +36,7 @@ public class Simulador
     // Passo atual da simulação.
     private int passo;
     // Visualização gráfica da simulação.
-    private VisualizacaoSimulador visualizacao;
+    private Desenhavel visualizacao;
     
     /**
      * Constrói um campo de simulação com tamanho padrão.
@@ -46,12 +46,17 @@ public class Simulador
         this(PROFUNDIDADE_PADRAO, LARGURA_PADRAO);
     }
     
+    public Simulador(int profundidade, int largura)
+    {
+        this(profundidade, largura, new VisualizacaoSimulador(profundidade, largura));
+    }
+
     /**
      * Cria um campo de simulação com o tamanho especificado.
      * @param profundidade Profundidade do campo. Deve ser maior que zero.
      * @param largura Largura do campo. Deve ser maior que zero.
      */
-    public Simulador(int profundidade, int largura)
+    public Simulador(int profundidade, int largura, Desenhavel visualizacao)
     {
         if(largura <= 0 || profundidade <= 0) {
             System.out.println("As dimensões devem ser maiores que zero.");
@@ -65,9 +70,9 @@ public class Simulador
         campoAtualizado = new Campo(profundidade, largura);
 
         // Cria uma visualização do estado de cada posição no campo.
-        visualizacao = new VisualizacaoSimulador(profundidade, largura);
-        visualizacao.definirCor(Raposa.class, Color.blue);
-        visualizacao.definirCor(Coelho.class, Color.orange);
+        this.visualizacao = visualizacao;
+        this.visualizacao.definirCor(Raposa.class, Color.blue);
+        this.visualizacao.definirCor(Coelho.class, Color.orange);
         
         // Configura o ponto inicial da simulação.
         reiniciar();
