@@ -9,8 +9,10 @@ import java.awt.Color;
  * Um simulador simples de predador e presa, baseado em um campo contendo
  * coelhos e raposas.
  * 
+ * VERSÃO MODIFICADA: Inclui sistema de clima e controles de pausa/continuar.
+ * 
  * @author David J. Barnes e Michael Kolling
- * @version 2002-04-09 (traduzido)
+ * @version 2002-04-09 (traduzido e modificado)
  */
 public class Simulador
 {
@@ -37,6 +39,14 @@ public class Simulador
     private int passo;
     // Visualização gráfica da simulação.
     private Desenhavel visualizacao;
+    
+    // ===== NOVOS ATRIBUTOS =====
+    // Sistema de clima da simulação
+    private Clima clima;
+    // Controle de pausa da simulação
+    private boolean pausada;
+    // Indica se a simulação está em execução
+    private boolean emExecucao;
     
     /**
      * Constrói um campo de simulação com tamanho padrão.
@@ -74,9 +84,124 @@ public class Simulador
         this.visualizacao.definirCor(Raposa.class, Color.blue);
         this.visualizacao.definirCor(Coelho.class, Color.orange);
         
+        // Inicializa o sistema de clima (muda a cada 50 ciclos por padrão)
+        this.clima = new Clima(50);
+        
+        // Inicializa controles
+        this.pausada = false;
+        this.emExecucao = false;
+        
         // Configura o ponto inicial da simulação.
         reiniciar();
     }
+    
+    // ===== MÉTODOS DE CONTROLE DE SIMULAÇÃO =====
+    
+    /**
+     * Pausa a simulação em execução.
+     * A simulação pode ser continuada posteriormente com continuar().
+     */
+    public void pausar() {
+        if (emExecucao && !pausada) {
+            pausada = true;
+            System.out.println("⏸️  Simulação PAUSADA no passo " + passo);
+        } else if (pausada) {
+            System.out.println("⚠️  A simulação já está pausada.");
+        } else {
+            System.out.println("⚠️  Não há simulação em execução para pausar.");
+        }
+    }
+    
+    /**
+     * Continua a simulação pausada.
+     */
+    public void continuar() {
+        if (pausada) {
+            pausada = false;
+            System.out.println("▶️  Simulação CONTINUADA a partir do passo " + passo);
+        } else if (emExecucao) {
+            System.out.println("⚠️  A simulação já está em execução.");
+        } else {
+            System.out.println("⚠️  Não há simulação pausada para continuar.");
+        }
+    }
+    
+    /**
+     * Verifica se a simulação está pausada.
+     * @return true se a simulação estiver pausada, false caso contrário.
+     */
+    public boolean estaPausada() {
+        return pausada;
+    }
+    
+    /**
+     * Verifica se a simulação está em execução (pausada ou não).
+     * @return true se a simulação estiver em execução.
+     */
+    public boolean estaEmExecucao() {
+        return emExecucao;
+    }
+    
+    /**
+     * Reinicia completamente a simulação para o estado inicial.
+     * Remove todos os animais, limpa o campo, reinicia o clima e reseta contadores.
+     */
+    public void reiniciar()
+    {
+        System.out.println("\n🔄 REINICIANDO SIMULAÇÃO...");
+        
+        // Reseta o passo
+        passo = 0;
+        
+        // Limpa todas as listas de animais
+        animais.clear();
+        novosAnimais.clear();
+        
+        // Limpa os campos
+        campo.limpar();
+        campoAtualizado.limpar();
+        
+        // Reinicia o clima
+        if (clima != null) {
+            clima.reiniciar();
+        }
+        
+        // Reseta controles
+        pausada = false;
+        emExecucao = false;
+        
+        // Popula novamente o campo
+        popular(campo);
+        
+        // Reinicia a visualização
+        visualizacao.reiniciar();
+        
+        // Mostra o estado inicial
+        visualizacao.mostrarStatus(passo, campo);
+        
+        System.out.println("✅ Simulação reiniciada com sucesso!");
+        System.out.println("📊 Total de animais: " + animais.size());
+    }
+    
+    // ===== MÉTODOS DE CLIMA =====
+    
+    /**
+     * Retorna o sistema de clima da simulação.
+     * @return O objeto Clima
+     */
+    public Clima getClima() {
+        return clima;
+    }
+    
+    /**
+     * Define um novo sistema de clima para a simulação.
+     * @param clima O novo sistema de clima
+     */
+    public void setClima(Clima clima) {
+        this.clima = clima;
+    }
+    
+    // ===== MÉTODOS DE SIMULAÇÃO =====
     
     /**
      * Executa a simulação a partir do estado atual por um período razoavelmente longo,
@@ -90,23 +215,57 @@ public class Simulador
     /**
      * Executa a simulação a partir do estado atual pelo número de passos indicado.
      * Interrompe antes se a simulação deixar de ser viável.
+     * Respeita o estado de pausa da simulação.
+     * 
      * @param numPassos Quantidade de passos a simular.
      */
     public void simular(int numPassos)
     {
-        for(int passo = 1; passo <= numPassos && visualizacao.ehViavel(campo); passo++) {
+        emExecucao = true;
+        System.out.println("\n▶️  Iniciando simulação de " + numPassos + " passos...\n");
+        
+        for(int p = 1; p <= numPassos && visualizacao.ehViavel(campo); p++) {
+            // Verifica se está pausada antes de cada passo
+            while (pausada) {
+                try {
+                    Thread.sleep(100); // Aguarda 100ms enquanto pausada
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    System.out.println("❌ Simulação interrompida.");
+                    emExecucao = false;
+                    return;
+                }
+            }
+            
             simularUmPasso();
+            
+            // Pequena pausa para visualização (opcional)
+            try {
+                Thread.sleep(50); // 50ms entre passos
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
         }
+        
+        emExecucao = false;
+        System.out.println("\n✅ Simulação concluída no passo " + passo);
+        System.out.println(clima);
     }
     
     /**
      * Executa a simulação a partir do estado atual por um único passo.
-     * Atualiza o estado de cada raposa e coelho.
+     * Atualiza o estado de cada raposa e coelho, e atualiza o clima.
      */
     public void simularUmPasso()
     {
         passo++;
         novosAnimais.clear();
+        
+        // Atualiza o clima a cada passo
+        if (clima != null) {
+            clima.atualizar();
+        }
         
         // Permite que todos os animais ajam.
         for(Iterator<Ator> iter = animais.iterator(); iter.hasNext(); ) {
@@ -130,23 +289,38 @@ public class Simulador
 
         // Exibe o novo estado na tela.
         visualizacao.mostrarStatus(passo, campo);
-    }
         
-    /**
-     * Reinicia a simulação para o estado inicial.
-     */
-    public void reiniciar()
-    {
-        passo = 0;
-        animais.clear();
-        campo.limpar();
-        campoAtualizado.limpar();
-        popular(campo);
-        
-        // Mostra o estado inicial.
-        visualizacao.mostrarStatus(passo, campo);
+        // Exibe informações do clima a cada 10 passos
+        if (passo % 10 == 0) {
+            System.out.println("Passo " + passo + " - " + clima + 
+                             " | Animais vivos: " + animais.size());
+        }
     }
     
+    /**
+     * Retorna o passo atual da simulação.
+     * @return O número do passo atual
+     */
+    public int getPasso() {
+        return passo;
+    }
+    
+    /**
+     * Retorna a lista de animais atualmente vivos.
+     * @return Lista de atores
+     */
+    public List<Ator> getAnimais() {
+        return new ArrayList<>(animais); // Retorna cópia para segurança
+    }
+    
+    /**
+     * Retorna o campo atual da simulação.
+     * @return O campo atual
+     */
+    public Campo getCampo() {
+        return campo;
+    }
+        
     /**
      * Popula o campo com raposas e coelhos.
      * @param campo O campo a ser populado.
