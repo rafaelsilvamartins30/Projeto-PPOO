@@ -16,6 +16,8 @@ import java.awt.event.ActionEvent;
  * Permite pausar, continuar e reiniciar a simulação.
  * A simulação pode ser executada por um número especificado de passos.
  * 
+ * VERSÃO MODIFICADA: Inclui sistema de clima e controles de pausa/continuar.
+ * 
  * @author David J. Barnes e Michael Kolling
  * @author Grupo 10
  * @version 2025-11-30 (traduzido e modificado)
@@ -101,6 +103,13 @@ public class Simulador
         this.visualizacao.definirCor(Cobra.class, Color.GREEN);
         this.visualizacao.definirCor(Gaviao.class, Color.RED);
         this.visualizacao.definirCor(Urso.class, Color.BLACK);
+        
+        // Inicializa o sistema de clima (muda a cada 50 ciclos por padrão)
+        this.clima = new Clima(50);
+        
+        // Inicializa controles
+        this.pausada = false;
+        this.emExecucao = false;
         
         // Inicializa o sistema de clima (muda a cada 50 ciclos por padrão)
         this.clima = new Clima(50);
@@ -250,7 +259,7 @@ public class Simulador
         // O loop roda enquanto o programa estiver aberto (emExecucao = true)
         while(emExecucao) {
             
-            // 1. Verifica se atingiu o limite de passos do objetivo atual
+            // Verifica se atingiu o limite de passos do objetivo atual
             // Note que usamos >= para garantir que ele pare EXATAMENTE no limite
             if (passo >= numPassos) {
                 // Só avisa e pausa se ainda não estiver pausado
@@ -261,7 +270,7 @@ public class Simulador
                 }
             }
 
-            // 2. Verifica se o jogo acabou (todos morreram)
+            // Verifica se o jogo acabou (todos morreram)
             if (!visualizacao.ehViavel(campo)) {
                 if (!pausada) {
                     System.out.println("❌ Todos os animais morreram. Pausando...");
@@ -270,7 +279,7 @@ public class Simulador
                 }
             }
 
-            // 3. Loop de espera (Pausa)
+            // Loop de espera (Pausa)
             // Se estiver pausado, o programa fica preso aqui esperando você clicar "Continuar"
             while (pausada) {
                 try {
@@ -280,7 +289,7 @@ public class Simulador
                 }
             }
             
-            // 4. Se não estiver pausado, executa um passo
+            // Se não estiver pausado, executa um passo
             simularUmPasso();
             
             // Pequeno delay para a animação não ser instantânea
@@ -324,7 +333,7 @@ public class Simulador
             campoAtualizado.crescerGrama();
         }
 
-        // 3. Permite que todos os animais ajam
+        // Permite que todos os animais ajam
         for(Iterator<Ator> iter = animais.iterator(); iter.hasNext(); ) {
             Ator ator = iter.next();
             if(ator.estaVivo()) {

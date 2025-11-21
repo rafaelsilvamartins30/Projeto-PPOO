@@ -37,8 +37,9 @@ O campo não é apenas uma grade vazia. O simulador carrega um mapa (`mapa.txt`)
 * Indicador de Clima e Passo atual.
 * Controles de **Pausar**, **Continuar** e **Reiniciar** simulação.
 
----
+✔ Criação da interface Desenhavel
 
+<<<<<<< HEAD
 ## 🛠️ Tecnologias e Padrões de Projeto
 
 O projeto foi desenvolvido utilizando **Java** puro, com foco em Orientação a Objetos.
@@ -47,9 +48,16 @@ O projeto foi desenvolvido utilizando **Java** puro, com foco em Orientação a 
 * **MVC (Model-View-Controller):** Separação clara entre a lógica de negócio (`Simulador`, `Campo`), a representação visual (`VisualizacaoSimulador`) e o controle de fluxo.
 * **Template Method:** A classe abstrata `Animal` define o esqueleto do comportamento (`agir`, `reproduzir`), enquanto as subclasses (`Urso`, `Raposa`) implementam os detalhes específicos (probabilidades, idade máxima).
 * **Observer:** Utilizado na interface gráfica para lidar com os eventos dos botões (Listeners).
+=======
+Foi criada a interface Desenhavel, responsável por definir um contrato mínimo para qualquer forma de visualização da simulação.
+A interface possui os métodos:
 
----
+definirCor(Class<?> classe, Color cor)
+>>>>>>> 528392b94d58d013d9f50bc7692ce35e78142643
 
+mostrarStatus(int passo, Campo campo)
+
+<<<<<<< HEAD
 ## 🚀 Como Executar
 
 ### Pré-requisitos
@@ -66,9 +74,19 @@ O projeto foi desenvolvido utilizando **Java** puro, com foco em Orientação a 
     ```bash
     java Principal
     ```
+=======
+ehViavel(Campo campo)
 
----
+reiniciar()
 
+Esses métodos representam tudo que o simulador precisa solicitar a uma view, sem conhecer sua implementação concreta.
+
+✔ VisualizacaoSimulador agora implementa Desenhavel
+>>>>>>> 528392b94d58d013d9f50bc7692ce35e78142643
+
+A classe gráfica padrão (VisualizacaoSimulador) passou a:
+
+<<<<<<< HEAD
 ## 📂 Estrutura do Projeto
 
 * `Principal.java`: Ponto de entrada (`main`).
@@ -78,10 +96,60 @@ O projeto foi desenvolvido utilizando **Java** puro, com foco em Orientação a 
     * `Urso.java`, `Raposa.java`, `Cobra.java`, `Gavião.java`, `Coelho.java`, `Rato.java`.
 * `Clima.java`: Lógica de mudança de tempo.
 * `VisualizacaoSimulador.java`: Interface gráfica construída com Java Swing.
+=======
+implementar a interface Desenhavel
 
----
+garantir a presença de todos os métodos definidos no contrato
 
+continuar funcionando como a visualização padrão por meio da interface
+
+Essa alteração permite que outras visualizações sejam adicionadas futuramente, como uma visualização textual ou gráfica alternativa, sem modificar o Simulador.
+>>>>>>> 528392b94d58d013d9f50bc7692ce35e78142643
+
+✔ Simulador agora depende apenas da interface Desenhavel
+
+<<<<<<< HEAD
 ## 👥 Autores
 
 * **Base Original:** David J. Barnes e Michael Kölling (livro *Objects First with Java*).
 * **Implementação do Ecossistema Estendido:** Grupo 10.
+=======
+A classe Simulador foi modificada para não conhecer mais diretamente VisualizacaoSimulador.
+
+Principais alterações:
+
+O atributo interno deixou de ser um VisualizacaoSimulador e passou a ser um Desenhavel.
+
+O construtor foi refatorado para aceitar um objeto Desenhavel como parâmetro.
+
+O construtor padrão do simulador instancia a visualização gráfica, mas a armazena como interface.
+
+Todas as chamadas a métodos visuais (mostrarStatus, ehViavel, definirCor, etc.) agora usam apenas o tipo abstrato Desenhavel.
+
+Essa mudança atende ao princípio Programar para interfaces, não implementações, e torna o simulador extensível e mais fácil de manter.
+
+✔ Possibilidade de múltiplas visualizações
+
+Com o desacoplamento implementado, agora é possível criar outras visualizações da simulação sem alterar nenhuma linha de código do simulador.
+
+Exemplo:
+VisualizacaoTexto implements Desenhavel 
+(Não implementado)
+(exibição da simulação no console)
+
+O simulador pode receber qualquer implementação de Desenhavel:
+
+Simulador sim = new Simulador(50, 70, new VisualizacaoTexto());
+
+✔ Benefícios da Refatoração
+
+🔄 Substituição dinâmica da view sem alterar o simulador
+
+📦 Código mais modular e coeso
+
+🧪 Facilita testes automatizados usando uma visualização "fake"
+
+🧩 Permite múltiplas views simultâneas, se necessário
+
+📝 Segue o mesmo padrão ensinado no livro, facilitando alinhamento com o professor
+>>>>>>> 528392b94d58d013d9f50bc7692ce35e78142643
