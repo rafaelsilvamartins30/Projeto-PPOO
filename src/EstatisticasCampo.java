@@ -1,4 +1,3 @@
-import java.awt.Color;
 import java.util.HashMap;
 import java.util.Iterator;
 
@@ -12,7 +11,7 @@ import java.util.Iterator;
  */
 public class EstatisticasCampo
 {
-    // Contadores para cada tipo de entidade (raposa, coelho, etc.) na simulação.
+    // Contadores para cada tipo de entidade na simulação.
     private HashMap contadores;
     // Indica se os contadores estão atualizados no momento.
     private boolean contagensValidas;
@@ -106,7 +105,7 @@ public class EstatisticasCampo
     }
     
     /**
-     * Gera contagens do número de raposas e coelhos.
+     * Gera contagens do número de animais.
      * Essas contagens não são mantidas atualizadas conforme os animais
      * são colocados no campo, mas apenas quando há uma solicitação
      * por essas informações.

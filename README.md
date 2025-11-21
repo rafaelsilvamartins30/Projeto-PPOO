@@ -1,94 +1,87 @@
-# 🦊🐇 Simulação de Ecossistema: Raposas e Coelhos (Java)
+# 🦁 Simulador de Ecossistema (Predador-Presa)
 
-Este projeto é uma simulação orientada a objetos de um **ecossistema** com **raposas** e **coelhos**, que interagem em um campo bidimensional. Baseado no modelo clássico de Barnes & Kölling e **traduzido/adaptado para português**.
+Este projeto é uma simulação avançada de um ecossistema baseada em agentes, desenvolvida em **Java**. O sistema modela a interação entre diversas espécies de animais, crescimento vegetal, influência climática e obstáculos geográficos.
 
----
+O projeto é uma evolução robusta do clássico exemplo *"Foxes and Rabbits"* do livro *Objects First with Java* (Barnes & Kölling), implementando novas camadas de complexidade e Padrões de Projeto.
 
-## 🎯 Objetivos didáticos
+## 📋 Funcionalidades
 
-- Praticar **POO**: abstração, encapsulamento, herança e polimorfismo.  
-- Usar **interfaces** para contratos comportamentais.  
-- Trabalhar com **coleções Java** (List, HashMap, Iterator).  
-- Simular dinâmicas **predador–presa** (nascimento, envelhecimento, morte, reprodução e alimentação).
+O simulador vai muito além do modelo básico, introduzindo:
 
----
+### 1. Cadeia Alimentar Complexa
+Diferente do modelo binário (apenas Raposa e Coelho), este ecossistema suporta múltiplas espécies com comportamentos distintos:
+* **Urso:** O predador de topo. Caça Raposas, Cobras e Coelhos. Pode **pescar** se estiver perto de um Rio.
+* **Gavião:** Predador aéreo que foca na caça de Ratos.
+* **Raposa:** Predador intermediário. Caça Coelhos e Ratos.
+* **Cobra:** Caça Coelhos e Ratos.
+* **Coelho e Rato:** Herbívoros primários.
 
-## 🧩 Estrutura das classes
+### 2. Sistema de Vegetação (Grama) 🌱
+Os herbívoros não se reproduzem infinitamente. Eles dependem da **Grama** presente no campo.
+* A grama cresce gradualmente a cada turno.
+* Se os herbívoros comerem tudo, a população decai (Fome), criando um **limite trófico** realista.
 
-```
-src/
-├── Animal.java                # Classe abstrata base (idade, vida, reprodução, localização)
-├── Ator.java                  # Interface: define agir(...) e estaVivo()
-├── Campo.java                 # Grade 2D e utilidades de vizinhança/ocupação
-├── Coelho.java                # Presa: movimenta, reproduz e pode morrer por superlotação/idade
-├── Contador.java              # Utilitário de contagem por espécie
-├── Desenhavel.java            # Interface opcional para elementos desenháveis (GUI)
-├── EstatisticasCampo.java     # Coleta e exibe estatísticas de população/viabilidade
-├── Localizacao.java           # Par (linha, coluna) com equals/hashCode
-├── Raposa.java                # Predador: caça coelhos, sente fome e reproduz
-├── Simulador.java             # Loop principal da simulação (popular, passos, troca de campos)
-├── VisualizacaoSimulador.java # GUI (Swing/AWT) para desenhar o campo e mostrar estatísticas
-└── Principal.java             # Ponto de entrada (main)
-```
+### 3. Clima Dinâmico ⛈️☀️
+Um sistema climático (`Clima.java`) que altera o estado do ambiente:
+* **Estados:** `NORMAL` e `CHUVOSO`.
+* **Impacto:** Durante a chuva, a taxa de crescimento da grama aumenta, acelerando a recuperação do ecossistema.
 
-### Principais responsabilidades
+### 4. Geografia e Obstáculos 🗺️
+O campo não é apenas uma grade vazia. O simulador carrega um mapa (`mapa.txt`) que contém:
+* **Rios (R):** Barreiras naturais (exceto para pesca do Urso).
+* **Pedras (P):** Bloqueios de movimento.
 
-- **Animal**: base para espécies (idade, vida, reprodução probabilística, localização).  
-- **Ator**: contrato para `agir(...)` durante um passo da simulação.  
-- **Campo**: mantém matriz de objetos e fornece vizinhanças (adjacentes livres/aleatórias).  
-- **Coelho**: define parâmetros de reprodução/idade máxima e movimento simples.  
-- **Raposa**: além de reproduzir/envelhecer, **caça coelhos** e tem **fome** que leva à morte.  
-- **EstatisticasCampo**: contabiliza por classe e testa viabilidade (mais de uma espécie viva).  
-- **VisualizacaoSimulador**: janela Swing que colore cada célula por espécie e mostra contagens.  
-- **Simulador**: orquestra a simulação: popula o campo (probabilidades), itera passos, atualiza GUI.  
-- **Principal**: cria `Simulador` e executa `simular(100)` por padrão.
+### 5. Interface Gráfica (Swing) 🎨
+* Visualização em tempo real da grade.
+* Legenda de cores para cada espécie.
+* Indicador de Clima e Passo atual.
+* Controles de **Pausar**, **Continuar** e **Reiniciar** simulação.
 
 ---
 
+## 🛠️ Tecnologias e Padrões de Projeto
 
-## 🔧 Parâmetros principais da simulação
+O projeto foi desenvolvido utilizando **Java** puro, com foco em Orientação a Objetos.
 
-- **Dimensões do campo**: 50 x 50 (padrão).  
-- **Prob. de criação**: raposa = 0.02; coelho = 0.08.  
-- **Reprodução** e **limites de idade** são **específicos por espécie**:
-  - Coelho: idade reprodutiva = 5; idade máxima = 50; prob. reprodução = 0.15; ninhada ≤ 5.  
-  - Raposa: idade reprodutiva = 10; idade máxima = 150; prob. reprodução = 0.09; ninhada ≤ 3; fome.
-
-> Esses parâmetros estão codificados nas classes das espécies e podem ser ajustados para experimentar diferentes dinâmicas.
+### Design Patterns Identificados:
+* **MVC (Model-View-Controller):** Separação clara entre a lógica de negócio (`Simulador`, `Campo`), a representação visual (`VisualizacaoSimulador`) e o controle de fluxo.
+* **Template Method:** A classe abstrata `Animal` define o esqueleto do comportamento (`agir`, `reproduzir`), enquanto as subclasses (`Urso`, `Raposa`) implementam os detalhes específicos (probabilidades, idade máxima).
+* **Observer:** Utilizado na interface gráfica para lidar com os eventos dos botões (Listeners).
 
 ---
 
-## 🧪 Como alterar o número de passos
+## 🚀 Como Executar
 
-Na classe **Principal.java**:
-```java
-public class Principal {
-  public static void main(String[] args) {
-    Simulador simulador = new Simulador();
-    simulador.simular(200); // altere 100 -> 200, 500, etc.
-  }
-}
-```
+### Pré-requisitos
+* Java JDK 8 ou superior instalado.
 
----
-
-## 🖼️ Interface (GUI)
-
-- A **VisualizacaoSimulador** abre uma janela com:
-  - **Passo** (iteração atual);
-  - **População** por espécie;
-  - Um **grid** onde cada célula é colorida conforme a espécie presente (ou branco se vazia).
-- As cores das classes são registradas em `Simulador` via `visualizacao.definirCor(...)`.
+### Passo a Passo
+1.  Clone este repositório.
+2.  Certifique-se de que o arquivo `mapa.txt` esteja na raiz do projeto.
+3.  Compile os arquivos `.java`:
+    ```bash
+    javac .java
+    ```
+4.  Execute a classe principal:
+    ```bash
+    java Principal
+    ```
 
 ---
 
-## 👥 Autoria e créditos
+## 📂 Estrutura do Projeto
 
-- Adaptação/tradução para PT-BR e organização do código por estudantes da **UFLA (SI)**.  
-- Baseado no projeto didático de **David J. Barnes & Michael Kölling**.
+* `Principal.java`: Ponto de entrada (`main`).
+* `Simulador.java`: Controlador central ("Game Loop"). Gerencia o tempo e as interações.
+* `Campo.java`: Representa a grade (grid), armazena os animais e o nível de grama.
+* `Animal.java` (Abstrata): Classe base para todas as criaturas.
+    * `Urso.java`, `Raposa.java`, `Cobra.java`, `Gavião.java`, `Coelho.java`, `Rato.java`.
+* `Clima.java`: Lógica de mudança de tempo.
+* `VisualizacaoSimulador.java`: Interface gráfica construída com Java Swing.
 
 ---
 
-## 📄 Licença
+## 👥 Autores
 
-Uso **educacional**. Verifique a política da sua instituição antes de redistribuir.
+* **Base Original:** David J. Barnes e Michael Kölling (livro *Objects First with Java*).
+* **Implementação do Ecossistema Estendido:** Grupo 10.
