@@ -27,9 +27,9 @@ public class Simulador
     // As variáveis estáticas finais representam as configurações da simulação.
     
     // Largura padrão da grade.
-    private static final int LARGURA_PADRAO = 50;
+    private static final int LARGURA_PADRAO = 120;
     // Profundidade padrão da grade.
-    private static final int PROFUNDIDADE_PADRAO = 50;
+    private static final int PROFUNDIDADE_PADRAO = 75;
     // Probabilidade de que uma raposa seja criada em uma posição da grade.
     private static final double PROBABILIDADE_CRIACAO_RAPOSA = 0.02;
     // Probabilidade de que um coelho seja criado em uma posição da grade.

@@ -6,32 +6,31 @@ import javax.swing.border.EmptyBorder;
 
 public class VisualizacaoSimulador extends JFrame implements Desenhavel
 {
-    private static final Color COR_VAZIA = Color.white;
     private static final Color COR_DESCONHECIDA = Color.gray;
 
     private final String PREFIXO_PASSO = "Passo: ";
-    private final String PREFIXO_POPULACAO = "População: ";
     
     private JLabel rotuloPasso;
-    private JLabel rotuloPopulacao;
+    private PainelLegenda painelLegenda;
     private JLabel rotuloClima;
     private JButton botaoPausar;
     private JButton botaoReiniciar;
     
     private VisaoCampo visaoCampo;
-    private HashMap cores;
+    private HashMap<Class<?>, Color> cores;
     private EstatisticasCampo estatisticas;
 
     public VisualizacaoSimulador(int altura, int largura)
     {
         estatisticas = new EstatisticasCampo();
-        cores = new HashMap();
+        cores = new HashMap<>();
 
         setTitle("Simulador Ecossistema - Grupo 10");
         setLocation(100, 50);
         
         // 1. Painel Superior
         JPanel painelSuperior = new JPanel(new GridLayout(1, 2));
+        painelSuperior.setPreferredSize(new Dimension(0, 40)); // Altura fixa, largura flex
         rotuloPasso = new JLabel(PREFIXO_PASSO, JLabel.CENTER);
         rotuloClima = new JLabel("Clima: NORMAL", JLabel.CENTER);
         rotuloClima.setOpaque(true);
@@ -45,10 +44,12 @@ public class VisualizacaoSimulador extends JFrame implements Desenhavel
         
         // 3. Painel Inferior
         JPanel painelInferior = new JPanel(new BorderLayout());
-        rotuloPopulacao = new JLabel(PREFIXO_POPULACAO, JLabel.CENTER);
-        rotuloPopulacao.setBorder(new EmptyBorder(10, 0, 10, 0));
+        painelInferior.setPreferredSize(new Dimension(0, 140)); // Altura fixa para legenda + botões
+        painelLegenda = new PainelLegenda();
+        painelLegenda.setBorder(new EmptyBorder(5, 5, 5, 5));
         
         JPanel painelBotoes = new JPanel(new FlowLayout());
+        painelBotoes.setPreferredSize(new Dimension(0, 40));
         botaoPausar = new JButton("Pausar");
         botaoReiniciar = new JButton("Resetar Simulação");
         
@@ -58,7 +59,7 @@ public class VisualizacaoSimulador extends JFrame implements Desenhavel
         painelBotoes.add(botaoPausar);
         painelBotoes.add(botaoReiniciar);
         
-        painelInferior.add(rotuloPopulacao, BorderLayout.NORTH);
+        painelInferior.add(painelLegenda, BorderLayout.CENTER);
         painelInferior.add(painelBotoes, BorderLayout.SOUTH);
 
         Container conteudo = getContentPane();
@@ -66,7 +67,9 @@ public class VisualizacaoSimulador extends JFrame implements Desenhavel
         conteudo.add(visaoCampo, BorderLayout.CENTER);
         conteudo.add(painelInferior, BorderLayout.SOUTH);
         
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         pack();
+        setLocationRelativeTo(null); // Centralizar na tela
         setVisible(true);
     }
     
@@ -113,13 +116,15 @@ public class VisualizacaoSimulador extends JFrame implements Desenhavel
 
     // --- MÉTODOS EXISTENTES ---
 
+
+
     @Override
     public void definirCor(Class<?> classeAnimal, Color cor) {
         cores.put(classeAnimal, cor);
     }
 
-    private Color getCor(Class classeAnimal) {
-        Color c = (Color) cores.get(classeAnimal);
+    private Color getCor(Class<?> classeAnimal) {
+        Color c = cores.get(classeAnimal);
         if(c == null) return COR_DESCONHECIDA;
         else return c;
     }
@@ -160,7 +165,7 @@ public class VisualizacaoSimulador extends JFrame implements Desenhavel
             }
         }
         estatisticas.contagemConcluida();
-        rotuloPopulacao.setText(PREFIXO_POPULACAO + estatisticas.getDetalhesPopulacao(campo));
+        painelLegenda.atualizarLegenda(estatisticas, campo, cores);
         visaoCampo.repaint();
     }
 
@@ -179,6 +184,155 @@ public class VisualizacaoSimulador extends JFrame implements Desenhavel
     @Override
     public void fechar() {
         dispose();
+    }
+    
+    /**
+     * Painel personalizado para exibir a legenda com quadradinhos de cor
+     */
+    private class PainelLegenda extends JPanel {
+        private HashMap<Class<?>, String> nomesAnimais;
+        private HashMap<Class<?>, Integer> contagensAnimais;
+        private HashMap<Class<?>, Color> coresAnimais;
+        
+        public PainelLegenda() {
+            setMinimumSize(new Dimension(400, 90));
+            setPreferredSize(new Dimension(600, 90));
+            nomesAnimais = new HashMap<>();
+            contagensAnimais = new HashMap<>();
+            coresAnimais = new HashMap<>();
+            
+            // Mapear nomes amigáveis para as classes
+            try {
+                nomesAnimais.put(Class.forName("Raposa"), "Raposas");
+                nomesAnimais.put(Class.forName("Coelho"), "Coelhos");
+                nomesAnimais.put(Class.forName("Rato"), "Ratos");
+                nomesAnimais.put(Class.forName("Cobra"), "Cobras");
+                nomesAnimais.put(Class.forName("Gaviao"), "Gaviões");
+                nomesAnimais.put(Class.forName("Urso"), "Ursos");
+            } catch (ClassNotFoundException e) {
+                // Classes não encontradas, usar nomes das classes
+            }
+        }
+        
+        public void atualizarLegenda(EstatisticasCampo stats, Campo campo, HashMap<Class<?>, Color> cores) {
+            contagensAnimais.clear();
+            coresAnimais.clear();
+            
+            // Inicializar todos os animais com contagem 0
+            for (Class<?> classe : nomesAnimais.keySet()) {
+                Color cor = cores.get(classe);
+                if (cor != null) {
+                    coresAnimais.put(classe, cor);
+                    contagensAnimais.put(classe, 0);
+                }
+            }
+            
+            // Coletar informações dos animais presentes no campo
+            for(int linha = 0; linha < campo.getProfundidade(); linha++) {
+                for(int coluna = 0; coluna < campo.getLargura(); coluna++) {
+                    Object animal = campo.getObjetoEm(linha, coluna);
+                    if(animal != null && !(animal instanceof Obstaculo)) {
+                        Class<?> classe = animal.getClass();
+                        if (coresAnimais.containsKey(classe)) {
+                            contagensAnimais.put(classe, contagensAnimais.get(classe) + 1);
+                        }
+                    }
+                }
+            }
+            repaint();
+        }
+        
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) g.create();
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            
+            // Desenhar título centralizado no topo
+            g2d.setColor(Color.BLACK);
+            g2d.setFont(new Font("Arial", Font.BOLD, 16));
+            FontMetrics fmTitulo = g2d.getFontMetrics();
+            String titulo = "População";
+            int xTitulo = (getWidth() - fmTitulo.stringWidth(titulo)) / 2;
+            g2d.drawString(titulo, xTitulo, 20);
+            
+            // Configurar layout fixo 3x2
+            final int TAMANHO_QUADRADO = 12;
+            final int Y_PRIMEIRA_LINHA = 45;
+            final int Y_SEGUNDA_LINHA = 70;
+            
+            g2d.setFont(new Font("Arial", Font.PLAIN, 14));
+            
+            // Definir ordem fixa dos animais
+            Class<?>[] ordemAnimais = new Class<?>[6];
+            try {
+                ordemAnimais[0] = Class.forName("Raposa");
+                ordemAnimais[1] = Class.forName("Coelho"); 
+                ordemAnimais[2] = Class.forName("Rato");
+                ordemAnimais[3] = Class.forName("Cobra");
+                ordemAnimais[4] = Class.forName("Gaviao");
+                ordemAnimais[5] = Class.forName("Urso");
+            } catch (ClassNotFoundException e) {
+                // Se não encontrar as classes, usar as chaves disponíveis
+                int i = 0;
+                for (Class<?> classe : coresAnimais.keySet()) {
+                    if (i < 6) ordemAnimais[i++] = classe;
+                }
+            }
+            
+            // Calcular largura total necessária para centralizar
+            FontMetrics fm = g2d.getFontMetrics();
+            int larguraMaxima = 0;
+            String[] textosAnimais = new String[6];
+            
+            // Primeiro, calcular a largura de cada item
+            for (int i = 0; i < ordemAnimais.length && i < 6; i++) {
+                Class<?> classe = ordemAnimais[i];
+                if (classe != null && coresAnimais.containsKey(classe)) {
+                    Integer contagem = contagensAnimais.getOrDefault(classe, 0);
+                    String nome = nomesAnimais.getOrDefault(classe, classe.getSimpleName());
+                    textosAnimais[i] = nome + ": " + contagem;
+                    int larguraTexto = TAMANHO_QUADRADO + 5 + fm.stringWidth(textosAnimais[i]);
+                    if (larguraTexto > larguraMaxima) {
+                        larguraMaxima = larguraTexto;
+                    }
+                }
+            }
+            
+            // Calcular espaçamento e posição inicial para centralizar
+            final int ESPACO_ENTRE_COLUNAS = 20;
+            int larguraTotalGrid = (larguraMaxima * 3) + (ESPACO_ENTRE_COLUNAS * 2);
+            int xInicial = Math.max(10, (getWidth() - larguraTotalGrid) / 2);
+            
+            // Desenhar animais em posições fixas
+            for (int i = 0; i < ordemAnimais.length && i < 6; i++) {
+                Class<?> classe = ordemAnimais[i];
+                if (classe != null && coresAnimais.containsKey(classe)) {
+                    Color cor = coresAnimais.get(classe);
+                    Integer contagem = contagensAnimais.getOrDefault(classe, 0);
+                    String nome = nomesAnimais.getOrDefault(classe, classe.getSimpleName());
+                    
+                    // Calcular posição fixa
+                    int coluna = i % 3; // 0, 1, 2 para primeira linha; 0, 1, 2 para segunda linha
+                    int linha = i / 3;  // 0 para primeira linha; 1 para segunda linha
+                    
+                    int x = xInicial + (coluna * (larguraMaxima + ESPACO_ENTRE_COLUNAS));
+                    int y = (linha == 0) ? Y_PRIMEIRA_LINHA : Y_SEGUNDA_LINHA;
+                    
+                    // Desenhar quadradinho de cor
+                    g2d.setColor(cor);
+                    g2d.fillRect(x, y - TAMANHO_QUADRADO + 2, TAMANHO_QUADRADO, TAMANHO_QUADRADO);
+                    g2d.setColor(Color.BLACK);
+                    g2d.drawRect(x, y - TAMANHO_QUADRADO + 2, TAMANHO_QUADRADO, TAMANHO_QUADRADO);
+                    
+                    // Desenhar texto
+                    String textoItem = textosAnimais[i] != null ? textosAnimais[i] : (nome + ": " + contagem);
+                    g2d.drawString(textoItem, x + TAMANHO_QUADRADO + 5, y);
+                }
+            }
+            
+            g2d.dispose();
+        }
     }
     
     private class VisaoCampo extends JPanel {
