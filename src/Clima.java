@@ -2,7 +2,7 @@ import java.util.Random;
 
 /**
  * Representa o sistema de clima da simulação.
- * O clima pode estar "Normal" ou "Chuvoso" e afeta o comportamento dos animais.
+ * O clima pode estar "Normal" ou "Chuvoso".
  * 
  * O clima muda aleatoriamente após um número configurável de ciclos.
  */
@@ -80,14 +80,6 @@ public class Clima {
     }
     
     /**
-     * Retorna o estado atual do clima
-     * @return Estado atual (NORMAL ou CHUVOSO)
-     */
-    public EstadoClima getEstadoAtual() {
-        return estadoAtual;
-    }
-    
-    /**
      * Verifica se o clima está chuvoso
      * @return true se estiver chuvoso, false caso contrário
      */
@@ -113,16 +105,6 @@ public class Clima {
     }
     
     /**
-     * Define manualmente o número de ciclos para mudança
-     * @param ciclos Número de ciclos
-     */
-    public void setCiclosParaMudanca(int ciclos) {
-        if (ciclos > 0) {
-            this.ciclosParaMudanca = ciclos;
-        }
-    }
-    
-    /**
      * Retorna quantos ciclos faltam para a próxima verificação de mudança
      * @return Número de ciclos restantes
      */
@@ -138,22 +120,5 @@ public class Clima {
     public String toString() {
         return "Clima: " + estadoAtual + 
                " (próxima verificação em " + getCiclosRestantes() + " ciclos)";
-    }
-    
-    /**
-     * Retorna o fator multiplicador de reprodução baseado no clima
-     * Pode ser usado para aumentar a taxa de reprodução em clima chuvoso
-     * @return 1.0 para normal, valor maior para chuvoso
-     */
-    public double getFatorReproducao() {
-        return estaChuvoso() ? 1.3 : 1.0; // 30% mais reprodução na chuva
-    }
-    
-    /**
-     * Retorna o fator de crescimento de plantas (afeta disponibilidade de comida)
-     * @return 1.0 para normal, valor maior para chuvoso
-     */
-    public double getFatorCrescimentoPlantas() {
-        return estaChuvoso() ? 1.5 : 1.0; // 50% mais plantas na chuva
     }
 }

@@ -18,43 +18,65 @@ public class Coelho extends Animal {
     private static final double PROBABILIDADE_REPRODUCAO = 0.15;
     // O número máximo de filhotes por ninhada.
     private static final int TAMANHO_MAXIMO_NINHADA = 5;
+    // O valor máximo de alimento que um coelho
+    private static final int VALOR_ALIMENTAR_MAX = 20;
 
     /**
-     * Cria um novo coelho. Um coelho pode ser criado com idade
-     * zero (recém-nascido) ou com uma idade aleatória.
+     * Cria um novo coelho. A idade pode ser aleatória ou zero (novo nascimento).
+     * O nível de alimento também é inicializado. 
      * 
      * @param idadeAleatoria Se verdadeiro, o coelho terá uma idade aleatória.
      */
-    public Coelho(boolean idadeAleatoria)
-    {
+    public Coelho(boolean idadeAleatoria) {
         super(idadeAleatoria);
+        if(idadeAleatoria) {
+            setNivelAlimento(getAleatorio().nextInt(VALOR_ALIMENTAR_MAX));
+        } else {
+            setNivelAlimento(VALOR_ALIMENTAR_MAX);
+        }
     }
     
     /**
      * Isto é o que o coelho faz na maior parte do tempo — ele corre
-     * por aí. Às vezes ele se reproduz ou morre de velhice.
+     * por aí. Às vezes ele se reproduz, come grama ou morre de velhice.
+     * A fome agora também é considerada.
+     * @param campoAtual O campo atual.
+     * @param campoAtualizado O campo onde os animais atualizados devem ser colocados.
+     * @param novosCoelhos Uma lista para armazenar os novos coelhos nascidos.
      */
     @Override
     public void agir(Campo campoAtual, Campo campoAtualizado, List<Ator> novosCoelhos)
     {
         incrementarIdade();
+        incrementarFome(); // Coelhos agora sentem fome!
+        
         if(estaVivo()) {
+            // Tenta comer grama onde está pisando (no campo atualizado/futuro)
+            int comida = campoAtualizado.comerGrama(getLocalizacao());
+            if(comida > 0) {
+                setNivelAlimento(getNivelAlimento() + comida);
+                if (getNivelAlimento() > VALOR_ALIMENTAR_MAX) setNivelAlimento(VALOR_ALIMENTAR_MAX);
+            }
+            
+            // Reprodução
             int nascimentos = reproduzir();
             for(int b = 0; b < nascimentos; b++) {
-                Coelho novoCoelho = new Coelho(false);
-                novosCoelhos.add(novoCoelho);
-                Localizacao loc = campoAtualizado.localizacaoAdjacenteAleatoria(getLocalizacao());
-                novoCoelho.definirLocalizacao(loc);
-                campoAtualizado.colocar(novoCoelho, loc);
+                Localizacao loc = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
+                if (loc != null) {
+                    Coelho novoCoelho = new Coelho(false);
+                    novosCoelhos.add(novoCoelho);
+                    novoCoelho.definirLocalizacao(loc);
+                    campoAtualizado.colocar(novoCoelho, loc);
+                }
             }
+            
+            // Movimento
             Localizacao novaLocalizacao = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
-            // Só transfere para o campo atualizado se houver uma posição livre
             if(novaLocalizacao != null) {
                 definirLocalizacao(novaLocalizacao);
                 campoAtualizado.colocar(this, novaLocalizacao);
             }
             else {
-                // não pode se mover nem ficar — superlotação — todas as posições ocupadas
                 definirEstaVivo(false);
             }
         }
@@ -97,13 +119,5 @@ public class Coelho extends Animal {
     @Override
     protected int getIdadeReprodutiva() {
         return IDADE_REPRODUTIVA;
-    }
-
-    /**
-     * Informa que o coelho foi comido (morre).
-     */
-    public void foiComido()
-    {
-        definirEstaVivo(false);
     }
 }
