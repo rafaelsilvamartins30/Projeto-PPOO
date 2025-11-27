@@ -5,53 +5,48 @@ import java.util.List;
  * Ratos envelhecem, se movem, se reproduzem e morrem.
  */
 public class Rato extends Animal {
-    
-    // Constantes específicas da classe Rato
-    // Idade em que o rato pode começar a se reproduzir
+
     private static final int IDADE_REPRODUTIVA = 3;
-    // Idade máxima que um rato pode atingir
     private static final int IDADE_MAXIMA = 30;
-    // Probabilidade de reprodução do rato
     private static final double PROBABILIDADE_REPRODUCAO = 0.20;
-    // Tamanho máximo da ninhada do rato
     private static final int TAMANHO_MAXIMO_NINHADA = 6;
-    // O valor máximo de alimento que um rato pode ter
     private static final int VALOR_ALIMENTAR_MAX = 20;
 
     /**
      * Cria um rato. A idade pode ser aleatória ou zero (novo nascimento).
+     * 
      * @param idadeAleatoria se verdadeiro, a idade do rato será aleatória
      */
     public Rato(boolean idadeAleatoria) {
         super(idadeAleatoria);
-        if(idadeAleatoria) {
+        if (idadeAleatoria) {
             setNivelAlimento(getAleatorio().nextInt(VALOR_ALIMENTAR_MAX));
         } else {
             setNivelAlimento(VALOR_ALIMENTAR_MAX);
         }
     }
-    
+
     /**
      * Define o comportamento do rato em cada passo do tempo.
-     * @param campoAtual o campo atual
+     * 
+     * @param campoAtual      o campo atual
      * @param campoAtualizado o campo atualizado
-     * @param novosRatos a lista onde novos ratos serão adicionados
+     * @param novosRatos      a lista onde novos ratos serão adicionados
      */
     @Override
     public void agir(Campo campoAtual, Campo campoAtualizado, List<Ator> novosRatos) {
         incrementarIdade();
         incrementarFome();
 
-        if(estaVivo()) {
-            // Tenta comer grama onde está pisando (no campo atualizado/futuro)
+        if (estaVivo()) {
             int comida = campoAtualizado.comerGrama(getLocalizacao());
-            if(comida > 0) {
+            if (comida > 0) {
                 setNivelAlimento(getNivelAlimento() + comida);
-                if (getNivelAlimento() > VALOR_ALIMENTAR_MAX) setNivelAlimento(VALOR_ALIMENTAR_MAX);
+                if (getNivelAlimento() > VALOR_ALIMENTAR_MAX)
+                    setNivelAlimento(VALOR_ALIMENTAR_MAX);
             }
-            //Reprodução
             int nascimentos = reproduzir();
-            for(int b = 0; b < nascimentos; b++) {
+            for (int b = 0; b < nascimentos; b++) {
                 Localizacao loc = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
                 if (loc != null) {
                     Rato novoRato = new Rato(false);
@@ -60,9 +55,8 @@ public class Rato extends Animal {
                     campoAtualizado.colocar(novoRato, loc);
                 }
             }
-            // Movimento
             Localizacao novaLocalizacao = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
-            if(novaLocalizacao != null) {
+            if (novaLocalizacao != null) {
                 definirLocalizacao(novaLocalizacao);
                 campoAtualizado.colocar(this, novaLocalizacao);
             } else {
@@ -71,9 +65,9 @@ public class Rato extends Animal {
         }
     }
 
-
     /**
      * Retorna a idade máxima do rato.
+     * 
      * @return a idade máxima do rato
      */
     @Override
@@ -83,6 +77,7 @@ public class Rato extends Animal {
 
     /**
      * Retorna a probabilidade de reprodução do rato.
+     * 
      * @return a probabilidade de reprodução do rato
      */
     @Override
@@ -92,6 +87,7 @@ public class Rato extends Animal {
 
     /**
      * Retorna o tamanho máximo da ninhada do rato.
+     * 
      * @return o tamanho máximo da ninhada do rato
      */
     @Override
@@ -101,6 +97,7 @@ public class Rato extends Animal {
 
     /**
      * Retorna a idade reprodutiva do rato.
+     * 
      * @return a idade reprodutiva do rato
      */
     @Override

@@ -10,9 +10,7 @@ import java.awt.Color;
  */
 public class Contador
 {
-    // Um nome para este tipo de participante da simulação.
     private String nome;
-    // Quantos desse tipo existem na simulação.
     private int contagem;
 
     /**

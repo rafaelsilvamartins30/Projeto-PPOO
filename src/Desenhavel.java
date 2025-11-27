@@ -1,5 +1,6 @@
 import java.awt.Color;
 import java.awt.event.ActionListener;
+
 /**
  * Interface para visualizações gráficas da simulação.
  * Permite definir cores para diferentes classes de animais,

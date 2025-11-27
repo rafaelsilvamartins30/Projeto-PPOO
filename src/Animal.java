@@ -14,16 +14,11 @@ import java.util.Random;
  */
 
 public abstract class Animal implements Ator{
-    // Um gerador de números aleatórios compartilhado para controlar a reprodução.
     private static final Random aleatorio = new Random();
 
-    // Indica se o animal está vivo ou não
     private boolean vivo;
-    // A posição do animal
     private Localizacao localizacao;
-    // A idade do animal
     private int idade;
-    // Nível de alimento do animal
     private int nivelAlimento;
 
     /**

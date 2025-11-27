@@ -11,9 +11,7 @@ import java.util.Iterator;
  */
 public class EstatisticasCampo
 {
-    // Contadores para cada tipo de entidade na simulação.
     private HashMap contadores;
-    // Indica se os contadores estão atualizados no momento.
     private boolean contagensValidas;
 
     /**
@@ -21,7 +19,6 @@ public class EstatisticasCampo
      */
     public EstatisticasCampo()
     {
-        // Cria uma coleção de contadores para cada tipo de animal encontrado.
         contadores = new HashMap();
         contagensValidas = true;
     }
@@ -67,7 +64,6 @@ public class EstatisticasCampo
     {
         Contador cnt = (Contador) contadores.get(classeAnimal);
         if(cnt == null) {
-            // Ainda não há um contador para essa espécie — cria um.
             cnt = new Contador(classeAnimal.getName());
             contadores.put(classeAnimal, cnt);
         }
@@ -89,7 +85,6 @@ public class EstatisticasCampo
      */
     public boolean ehViavel(Campo campo)
     {
-        // Quantas contagens são diferentes de zero.
         int naoZero = 0;
         if(!contagensValidas) {
             gerarContagens(campo);

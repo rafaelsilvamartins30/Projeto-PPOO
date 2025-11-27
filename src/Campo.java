@@ -17,20 +17,19 @@ import java.util.Random;
  */
 public class Campo
 {
-    // Um gerador de números aleatórios compartilhado para uso em todo o campo.
+
     private static final Random aleatorio = new Random();
     
-    // Dimensões
-    private int profundidade, largura;
-    // Onde ficam os animais e obstáculos
+    private int profundidade;
+    
+    private int largura;
+
     private Object[][] campo;
     
-    // NOVIDADE: Matriz da Grama
-    // Armazena o nível de crescimento (0 a MAX_CRESCIMENTO_GRAMA)
     private int[][] nivelGrama;
-    // Constantes da grama
+
     private static final int MAX_CRESCIMENTO_GRAMA = 10; 
-    // Valor nutricional da grama quando comida
+
     private static final int VALOR_NUTRICIONAL_GRAMA = 5; 
 
     /**
@@ -45,7 +44,6 @@ public class Campo
         campo = new Object[profundidade][largura];
         nivelGrama = new int[profundidade][largura];
         
-        // Inicializa a grama já crescida
         for(int i=0; i < profundidade; i++) {
             for(int j=0; j < largura; j++) {
                 nivelGrama[i][j] = MAX_CRESCIMENTO_GRAMA;
@@ -53,15 +51,12 @@ public class Campo
         }
     }
     
-    // --- MÉTODOS DE GRAMA ---
-    
     /**
      * Faz a grama crescer em todo o campo, exceto onde há obstáculos.
      */
     public void crescerGrama() {
         for(int i=0; i < profundidade; i++) {
             for(int j=0; j < largura; j++) {
-                // Se não é um obstáculo (Rio/Pedra) e a grama não está cheia
                 Object obj = getObjetoEm(i, j);
                 boolean ehObstaculo = (obj instanceof Obstaculo);
                 
@@ -80,9 +75,8 @@ public class Campo
         int lin = localizacao.getLinha();
         int col = localizacao.getColuna();
         
-        // Só pode comer se estiver totalmente crescida (ou quase)
         if(nivelGrama[lin][col] >= MAX_CRESCIMENTO_GRAMA) {
-            nivelGrama[lin][col] = 0; // Zera a grama (terra seca)
+            nivelGrama[lin][col] = 0;
             return VALOR_NUTRICIONAL_GRAMA;
         }
         return 0;
@@ -106,8 +100,6 @@ public class Campo
             }
         }
     }
-
-    // --- MÉTODOS ORIGINAIS ABAIXO (MANTENHA IGUAL) ---
     
     public void limpar()
     {

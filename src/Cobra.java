@@ -6,16 +6,10 @@ import java.util.List;
  * Caça Ratos e Coelhos.
  */
 public class Cobra extends Animal {
-    // Constantes específicas da classe Cobra
-    // A idade em que uma cobra pode começar a se reproduzir
     private static final int IDADE_REPRODUTIVA = 8;
-    // A idade máxima que uma cobra pode atingir
     private static final int IDADE_MAXIMA = 80;
-    // Probabilidade de reprodução da cobra
     private static final double PROBABILIDADE_REPRODUCAO = 0.10;
-    // Tamanho máximo da ninhada da cobra
     private static final int TAMANHO_MAXIMO_NINHADA = 4;
-    // Cobra ganha 6 de comida ao comer (aguenta mais tempo sem comer que a raposa)
     private static final int VALOR_ALIMENTAR = 6; 
 
     /**
@@ -24,7 +18,7 @@ public class Cobra extends Animal {
      */
     public Cobra(boolean idadeAleatoria) {
         super(idadeAleatoria);
-        setNivelAlimento(VALOR_ALIMENTAR); // Começa bem alimentada
+        setNivelAlimento(VALOR_ALIMENTAR);
         if(idadeAleatoria) {
             setNivelAlimento(getAleatorio().nextInt(VALOR_ALIMENTAR));
         }
@@ -75,7 +69,6 @@ public class Cobra extends Animal {
         while(adjacentes.hasNext()) {
             Localizacao onde = (Localizacao) adjacentes.next();
             Object animal = campo.getObjetoEm(onde);
-            // Cobra come Rato E Coelho
             if(animal instanceof Rato) {
                 Rato rato = (Rato) animal;
                 if(rato.estaVivo()) { 

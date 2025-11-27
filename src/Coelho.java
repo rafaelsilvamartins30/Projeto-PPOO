@@ -8,17 +8,10 @@ import java.util.List;
  * @version 2002-04-11 (traduzido)
  */
 public class Coelho extends Animal {
-    // Características compartilhadas por todos os coelhos (campos estáticos).
-
-    // A idade na qual um coelho pode começar a se reproduzir.
     private static final int IDADE_REPRODUTIVA = 5;
-    // A idade máxima que um coelho pode alcançar.
     private static final int IDADE_MAXIMA = 50;
-    // A probabilidade de um coelho se reproduzir.
     private static final double PROBABILIDADE_REPRODUCAO = 0.15;
-    // O número máximo de filhotes por ninhada.
     private static final int TAMANHO_MAXIMO_NINHADA = 5;
-    // O valor máximo de alimento que um coelho
     private static final int VALOR_ALIMENTAR_MAX = 20;
 
     /**
@@ -48,17 +41,15 @@ public class Coelho extends Animal {
     public void agir(Campo campoAtual, Campo campoAtualizado, List<Ator> novosCoelhos)
     {
         incrementarIdade();
-        incrementarFome(); // Coelhos agora sentem fome!
+        incrementarFome();
         
         if(estaVivo()) {
-            // Tenta comer grama onde está pisando (no campo atualizado/futuro)
             int comida = campoAtualizado.comerGrama(getLocalizacao());
             if(comida > 0) {
                 setNivelAlimento(getNivelAlimento() + comida);
                 if (getNivelAlimento() > VALOR_ALIMENTAR_MAX) setNivelAlimento(VALOR_ALIMENTAR_MAX);
             }
             
-            // Reprodução
             int nascimentos = reproduzir();
             for(int b = 0; b < nascimentos; b++) {
                 Localizacao loc = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
@@ -70,7 +61,6 @@ public class Coelho extends Animal {
                 }
             }
             
-            // Movimento
             Localizacao novaLocalizacao = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
             if(novaLocalizacao != null) {
                 definirLocalizacao(novaLocalizacao);
