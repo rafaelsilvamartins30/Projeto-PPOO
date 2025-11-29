@@ -1,28 +1,25 @@
+import java.util.List;
 import java.util.Random;
 /**
  * Representa um animal genérico na simulação de predador e presa.
- * 
- * Esta é uma classe abstrata que define os comportamentos e 
- * características comuns a todos os animais do modelo, como idade,
- * localização, estado de vida e reprodução. 
- * As subclasses: por exemplo, {@link Coelho} e {@link Urso},
- * implementam comportamentos específicos, como caça, movimento 
- * e morte.
+ * Cada espécie de animal (predador ou presa) estende esta classe abstrata.
+ * Cada animal tem uma idade, um nível de alimento (fome) e pode se mover,
+ * reproduzir e morrer.
  * 
  * @author David J. Barnes e Michael Kolling
- * @version 2002-04-23
+ * @version 2025-11-30
  */
-
 public abstract class Animal implements Ator{
     private static final Random aleatorio = new Random();
-
     private boolean vivo;
     private Localizacao localizacao;
     private int idade;
     private int nivelAlimento;
 
     /**
-     * Cria um novo animal
+     * Cria um novo animal. 
+     * A idade pode ser aleatória ou zero (novo nascimento).
+     * Em ambos os casos, o nível de alimento é inicializado.
      * @param idadeAleatoria Se verdadeiro, o animal terá uma idade aleatória.
      */
     public Animal(boolean idadeAleatoria) 
@@ -30,15 +27,19 @@ public abstract class Animal implements Ator{
         vivo = true;
         idade = 0;
         if(idadeAleatoria) {
-            idade = aleatorio.nextInt(IDADE_MAXIMA());
+            idade = aleatorio.nextInt(idadeMaxima());
         }
         localizacao = null;
+
+        setNivelAlimento(Configuracao.VALOR_ALIMENTAR);
+        if(idadeAleatoria) setNivelAlimento(getAleatorio().nextInt(Configuracao.VALOR_ALIMENTAR));
     }
 
-    protected Random getAleatorio() 
-    {
-        return aleatorio;
-    }
+    /**
+     * Retorna o gerador de números aleatórios compartilhado.
+     * @return o gerador de números aleatórios
+     */
+    protected Random getAleatorio() { return aleatorio; }
 
     /**
      * Se o animal está vivo
@@ -47,9 +48,13 @@ public abstract class Animal implements Ator{
     @Override public boolean estaVivo() { return vivo; }
 
     /**
-     * Se o animal morrer esse método deve ser chamado
+     * Indica que o animal morreu.
+     * Define seu estado como morto e zera seu nível de alimento.
      */
-    protected void definirEstaVivo(boolean estaVivo) { vivo = estaVivo; }
+    public void morrer() {
+        vivo = false;
+        nivelAlimento = 0;
+    }
 
     /**
      * Retorna a localização do animal
@@ -62,19 +67,13 @@ public abstract class Animal implements Ator{
      * @param linha A coordenada vertical da localização.
      * @param coluna A coordenada horizontal da localização.
      */
-    protected void definirLocalizacao(int linha, int coluna) 
-    {
-        this.localizacao = new Localizacao(linha, coluna);
-    }
+    protected void definirLocalizacao(int linha, int coluna) {this.localizacao = new Localizacao(linha, coluna); }
 
     /**
      * Define a localização do animal.
      * @param localizacao A localização do animal.
      */
-    protected void definirLocalizacao(Localizacao localizacao)
-    {
-        this.localizacao = localizacao;
-    }
+    protected void definirLocalizacao(Localizacao localizacao) { this.localizacao = localizacao; }
 
     /**
      * Retorna a idade reprodutiva do animal.
@@ -96,9 +95,7 @@ public abstract class Animal implements Ator{
      * 
      * @return verdadeiro se o animal puder se reproduzir, falso caso contrário.
      */
-    public boolean podeReproduzir() {
-        return estaVivo() && getIdade() >= getIdadeReprodutiva();
-    }
+    public boolean podeReproduzir() { return idade >= getIdadeReprodutiva(); }
 
     /**
      * Calcula o número de nascimentos para este animal.
@@ -107,21 +104,68 @@ public abstract class Animal implements Ator{
      */
     protected int reproduzir() {
         int nascimentos = 0;
-        if(podeReproduzir() && aleatorio.nextDouble() <= PROBABILIDADE_REPRODUCAO()) {
-            nascimentos = aleatorio.nextInt(TAMANHO_MAXIMO_NINHADA()) + 1;
+        if(podeReproduzir() && aleatorio.nextDouble() <= probabilidadeReproducao()) {
+            nascimentos = aleatorio.nextInt(tamanhoMaximoNinhada()) + 1;
         }
         return nascimentos;
     }
 
     /**
+     * Lógica comum de reprodução para QUALQUER animal.
+     * @param campoAtualizado O campo onde os filhos serão colocados.
+     * @param novosAnimais A lista para registrar os recém-nascidos.
+     */
+    protected void processarReproducao(Campo campoAtualizado, List<Ator> novosAnimais) {
+        int nascimentos = reproduzir();
+        
+        for (int i = 0; i < nascimentos; i++) {
+            Localizacao loc = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
+            
+            if (loc != null) {
+                Animal filhote = criarFilho();
+                novosAnimais.add(filhote);
+                filhote.definirLocalizacao(loc);
+                campoAtualizado.colocar(filhote, loc);
+            }
+        }
+    }
+
+    /**
+     * Tenta mover o animal para uma localização adjacente livre.
+     * Se não conseguir (estiver bloqueado), o animal morre (superpopulação).
+     */
+    protected void tentarMoverLivremente(Campo campoAtualizado) {
+        Localizacao novaLocalizacao = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
+        
+        if (novaLocalizacao != null) {
+            moverPara(novaLocalizacao, campoAtualizado);
+        } else {
+            morrer();
+        }
+    }
+
+    /**
+     * Auxiliar para efetivar o movimento para um local específico.
+     */
+    protected void moverPara(Localizacao localizacao, Campo campoAtualizado) {
+        definirLocalizacao(localizacao);
+        campoAtualizado.colocar(this, localizacao);
+    }
+
+    /**
+     * Método abstrato que obriga cada espécie a definir como criar seu filhote.
+     */
+    protected abstract Animal criarFilho();
+
+    /**
      * A probabilidade de reprodução do animal.
      */
-    protected abstract double PROBABILIDADE_REPRODUCAO();
+    protected abstract double probabilidadeReproducao();
 
     /**
      * O tamanho máximo da ninhada do animal.
      */
-    protected abstract int TAMANHO_MAXIMO_NINHADA();
+    protected abstract int tamanhoMaximoNinhada();
 
     /**
      * Incrementa a idade.
@@ -129,15 +173,15 @@ public abstract class Animal implements Ator{
      */
     protected void incrementarIdade() {
         idade++;
-        if(idade > IDADE_MAXIMA()) {
-            definirEstaVivo(false);
+        if(idade > idadeMaxima()) {
+            morrer();
         }
     }
 
     /**
      * A idade máxima do animal.
      */
-    protected abstract int IDADE_MAXIMA();
+    protected abstract int idadeMaxima();
 
     /**
      * Retorna o nível de alimento do animal.
@@ -161,6 +205,6 @@ public abstract class Animal implements Ator{
      */
     protected void incrementarFome() {
         nivelAlimento--;
-        if(nivelAlimento <= 0) definirEstaVivo(false);
+        if(nivelAlimento <= 0) morrer();
     }
 }

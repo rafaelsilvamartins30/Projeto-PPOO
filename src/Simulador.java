@@ -1,37 +1,23 @@
 import java.awt.Color;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
 /**
  * Uma simulação simples de um ecossistema.
- * Cria e gerencia o campo, os animais, o clima e a interface gráfica.
- * Permite pausar, continuar e reiniciar a simulação.
- * A simulação pode ser executada por um número especificado de passos.
- * 
- * VERSÃO MODIFICADA: Inclui sistema de clima e controles de pausa/continuar.
+ * Esta simulação envolve predadores e presas que interagem em um campo.
+ * O campo também contém grama que cresce e pode ser comida por herbívoros.
+ * O clima afeta o crescimento da grama.
+ * A simulação pode ser pausada, continuada e reiniciada.
+ * Os obstáculos fixos podem ser carregados de um arquivo de texto para definir o terreno.
  * 
  * @author David J. Barnes e Michael Kolling
  * @author Grupo 10
  * @version 2025-11-30 (traduzido e modificado)
  */
-public class Simulador
-{
-    private static final int LARGURA_PADRAO = 120;
-    private static final int PROFUNDIDADE_PADRAO = 75;
-    private static final double PROBABILIDADE_CRIACAO_RAPOSA = 0.02;
-    private static final double PROBABILIDADE_CRIACAO_COELHO = 0.08;
-    private static final double PROBABILIDADE_CRIACAO_RATO = 0.08;
-    private static final double PROBABILIDADE_CRIACAO_COBRA = 0.03;
-    private static final double PROBABILIDADE_CRIACAO_GAVIAO = 0.02;
-    private static final double PROBABILIDADE_CRIACAO_URSO = 0.01;
+public class Simulador {
 
     private List<Ator> animais;
     private List<Ator> novosAnimais;
@@ -49,7 +35,7 @@ public class Simulador
      */
     public Simulador()
     {
-        this(PROFUNDIDADE_PADRAO, LARGURA_PADRAO);
+        this(Configuracao.PROFUNDIDADE_PADRAO, Configuracao.LARGURA_PADRAO);
     }
     
     public Simulador(int profundidade, int largura)
@@ -63,42 +49,48 @@ public class Simulador
      * @param largura Largura do campo. Deve ser maior que zero.
      */
     public Simulador(int profundidade, int largura, Desenhavel visualizacao)
-    {
+    {   
+        // Verifica se as dimensões são válidas
         if(largura <= 0 || profundidade <= 0) {
             System.out.println("As dimensões devem ser maiores que zero.");
             System.out.println("Usando valores padrão.");
-            profundidade = PROFUNDIDADE_PADRAO;
-            largura = LARGURA_PADRAO;
+            profundidade = Configuracao.PROFUNDIDADE_PADRAO;
+            largura = Configuracao.LARGURA_PADRAO;
         }
+        // Inicializa listas e campos
         animais = new ArrayList<Ator>();
         novosAnimais = new ArrayList<Ator>();
         campo = new Campo(profundidade, largura);
         campoAtualizado = new Campo(profundidade, largura);
-
+        // Configura a visualização
         this.visualizacao = visualizacao;
+        definirCores();
+        // Inicializa clima e estado da simulação
+        this.clima = new Clima(50);
+        this.pausada = false;
+        this.emExecucao = false;
+        // Carrega o mapa de obstáculos
+        carregarMapa("mapa.txt");
+        
+        reiniciar();
+        // Configura os botões da interface
+        configurarInterface();
+    }
+    
+    private void definirCores() {
         this.visualizacao.definirCor(Raposa.class, Color.blue);
         this.visualizacao.definirCor(Coelho.class, Color.orange);
         this.visualizacao.definirCor(Rato.class, Color.MAGENTA);
         this.visualizacao.definirCor(Cobra.class, Color.GREEN);
         this.visualizacao.definirCor(Gaviao.class, Color.RED);
         this.visualizacao.definirCor(Urso.class, Color.BLACK);
-        
-        this.clima = new Clima(50);
-        this.pausada = false;
-        this.emExecucao = false;
-        
-        carregarMapa("mapa.txt");
-        
-        reiniciar();
-
-        configurarInterface();
     }
-    
+
     /**
      * Pausa a simulação em execução.
      * A simulação pode ser continuada posteriormente com continuar().
      */
-    public void pausar() {
+    private void pausar() {
         if (emExecucao && !pausada) {
             pausada = true;
         } else if (pausada) {
@@ -144,25 +136,25 @@ public class Simulador
     public void reiniciar()
     {
         passo = 0;
-        
+        // Limpa todas as listas e campos
         animais.clear();
         novosAnimais.clear();
         
+        // Limpa os campos de simulação
         campo.limpar();
         campoAtualizado.limpar();
-        
+        // Reinicia o clima
         if (clima != null) {
             clima.reiniciar();
         }
-        
+        // Define o estado como não pausado
         pausada = false;
         visualizacao.setTextoBotaoPausa("Pausar");
-
+        // Aplica obstáculos fixos e popula o campo
         aplicarObstaculos(campo);
-        popular(campo);
-        
+        new Populador().popular(campo, animais);
+        // Reinicia a visualização e mostra o estado inicial
         visualizacao.reiniciar();
-        
         visualizacao.mostrarStatus(passo, campo);
     }
     
@@ -180,15 +172,6 @@ public class Simulador
      */
     public void setClima(Clima clima) {
         this.clima = clima;
-    }
-    
-    /**
-     * Executa a simulação a partir do estado atual por um período razoavelmente longo,
-     * por exemplo, 500 passos.
-     */
-    public void executarSimulacaoLonga()
-    {
-        simular(500);
     }
     
     /**
@@ -234,33 +217,38 @@ public class Simulador
     
     /**
      * Simula um único passo da simulação.
-     * Atualiza o estado de todos os animais, o clima e a grama.
-     * Atualiza a visualização ao final do passo.
+     * Atualiza o clima, processa o ciclo de vida dos animais e atualiza a visualização.
      */
     public void simularUmPasso()
     {
         passo++;
+        prepararNovosAnimais();
+        prepararObstaculos();
+        processarCicloDeVidaAnimais();
+        processarAmbienteEClima();
+        trocarCampos();
+        visualizacao.mostrarStatus(passo, campo);
+    }
+
+    /**
+     * Limpa a lista de nascimentos e aplica obstáculos fixos no campo de destino.
+     */
+    private void prepararNovosAnimais() {
         novosAnimais.clear();
-        
+    }
+    /**
+     * Aplica os obstáculos fixos no campo atualizado.
+     */
+    private void prepararObstaculos() {
         aplicarObstaculos(campoAtualizado);
-        campoAtualizado.copiarGramaDe(campo);
-        
-        if (clima != null) {
-            clima.atualizar();
-            
-            campoAtualizado.crescerGrama();
-            if(clima.estaChuvoso()) {
-                campoAtualizado.crescerGrama();
-            }
+    }
 
-            String textoClima = clima.estaChuvoso() ? "Clima: CHUVOSO (Crescimento Rápido)" : "Clima: NORMAL";
-            visualizacao.setInfoClima(textoClima, clima.estaChuvoso());
-        } 
-        else {
-            campoAtualizado.crescerGrama();
-        }
-
-        for(Iterator<Ator> iter = animais.iterator(); iter.hasNext(); ) {
+    /**
+     * Itera sobre todos os animais: faz agir, remove os mortos e registra os nascimentos.
+     */
+    private void processarCicloDeVidaAnimais() {
+        Iterator<Ator> iter = animais.iterator();
+        while(iter.hasNext()) {
             Ator ator = iter.next();
             if(ator.estaVivo()) {
                 ator.agir(campo, campoAtualizado, novosAnimais);
@@ -269,15 +257,44 @@ public class Simulador
                 iter.remove();
             }
         }
-
+        // Adiciona os filhotes nascidos neste turno
         animais.addAll(novosAnimais);
+    }
+
+    /**
+     * Gerencia o crescimento da grama e as mudanças climáticas.
+     */
+    private void processarAmbienteEClima() {
+        campoAtualizado.copiarGramaDe(campo);
         
+        // Se não houver sistema de clima, apenas cresce a grama normalmente
+        if (clima == null) {
+            campoAtualizado.crescerGrama();
+            return;
+        }
+
+        // Atualiza clima e aplica efeitos
+        clima.atualizar();
+        campoAtualizado.crescerGrama();
+        
+        // Se chover, a grama cresce uma segunda vez (dobro da velocidade)
+        if(clima.estaChuvoso()) {
+            campoAtualizado.crescerGrama();
+        }
+
+        // Atualiza a interface com o estado do clima
+        String textoClima = clima.estaChuvoso() ? "Clima: CHUVOSO (Crescimento Rápido)" : "Clima: NORMAL";
+        visualizacao.setInfoClima(textoClima, clima.estaChuvoso());
+    }
+
+    /**
+     * Troca as referências dos campos para o próximo passo.
+     */
+    private void trocarCampos() {
         Campo temp = campo;
         campo = campoAtualizado;
         campoAtualizado = temp;
         campoAtualizado.limpar();
-
-        visualizacao.mostrarStatus(passo, campo);
     }
     
     /**
@@ -305,60 +322,6 @@ public class Simulador
     }
 
     /**
-     * Popula o campo com animais, respeitando os obstáculos carregados.
-     * @param campo O campo a ser populado
-     */
-    private void popular(Campo campo) {
-        Random aleatorio = new Random();
-        
-        for(int linha = 0; linha < campo.getProfundidade(); linha++) {
-            for(int coluna = 0; coluna < campo.getLargura(); coluna++) {
-                
-                if(campo.getObjetoEm(linha, coluna) == null) {
-                    
-                    if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_RAPOSA) {
-                        Raposa raposa = new Raposa(true);
-                        animais.add(raposa);
-                        raposa.definirLocalizacao(linha, coluna);
-                        campo.colocar(raposa, linha, coluna);
-                    }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_COELHO) {
-                        Coelho coelho = new Coelho(true);
-                        animais.add(coelho);
-                        coelho.definirLocalizacao(linha, coluna);
-                        campo.colocar(coelho, linha, coluna);
-                    }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_RATO) {
-                        Rato rato = new Rato(true);
-                        animais.add(rato);
-                        rato.definirLocalizacao(linha, coluna);
-                        campo.colocar(rato, linha, coluna);
-                    }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_COBRA) {
-                        Cobra cobra = new Cobra(true);
-                        animais.add(cobra);
-                        cobra.definirLocalizacao(linha, coluna);
-                        campo.colocar(cobra, linha, coluna);
-                    }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_GAVIAO) {
-                        Gaviao gaviao = new Gaviao(true);
-                        animais.add(gaviao);
-                        gaviao.definirLocalizacao(linha, coluna);
-                        campo.colocar(gaviao, linha, coluna);
-                    }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_URSO) {
-                        Urso urso = new Urso(true);
-                        animais.add(urso);
-                        urso.definirLocalizacao(linha, coluna);
-                        campo.colocar(urso, linha, coluna);
-                    }
-                }
-            }
-        }
-        Collections.shuffle(animais);
-    }
-
-    /**
      * Configura os listeners dos botões usando Classes Anônimas.
      */
     private void configurarInterface() {
@@ -374,7 +337,7 @@ public class Simulador
                 }
             }
         });
-        
+        // Listener para o botão Reiniciar
         visualizacao.setAcaoReiniciar(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -390,48 +353,48 @@ public class Simulador
     }
 
     /**
-     * Carrega o mapa do arquivo e coloca os obstáculos no campo.
+     * Carrega o mapa e ajusta a simulação se necessário.
      */
     private void carregarMapa(String caminhoArquivo) {
-        try {
-            List<String> linhas = Files.readAllLines(Paths.get(caminhoArquivo));
-            if (linhas.isEmpty()) return;
+        // 1. Delegamos a leitura para a classe especialista (CarregadorMapa)
+        CarregadorMapa carregador = new CarregadorMapa();
+        Obstaculo[][] novoMapa = carregador.carregarObstaculos(caminhoArquivo);
 
-            int novaProfundidade = linhas.size();
-            int novaLargura = linhas.get(0).length();
+        if (novoMapa == null) return; // Se falhou, mantém o atual
 
-            mapaFixo = new Obstaculo[novaProfundidade][novaLargura];
+        this.mapaFixo = novoMapa;
 
-            if (novaProfundidade != campo.getProfundidade() || novaLargura != campo.getLargura()) {
-                campo = new Campo(novaProfundidade, novaLargura);
-                campoAtualizado = new Campo(novaProfundidade, novaLargura);
-                
-                visualizacao.fechar();
-                visualizacao = new VisualizacaoSimulador(novaProfundidade, novaLargura);
-                visualizacao.definirCor(Raposa.class, Color.blue);
-                visualizacao.definirCor(Coelho.class, Color.orange);
-                visualizacao.definirCor(Rato.class, Color.MAGENTA);
-                visualizacao.definirCor(Cobra.class, Color.GREEN);
-                visualizacao.definirCor(Gaviao.class, Color.RED);
-                visualizacao.definirCor(Urso.class, Color.BLACK);
+        // 2. Verificamos se as dimensões mudaram
+        int novaProfundidade = novoMapa.length;
+        int novaLargura = novoMapa[0].length;
+        
+        boolean dimensoesMudaram = (novaProfundidade != campo.getProfundidade()) || 
+                                   (novaLargura != campo.getLargura());
 
-                configurarInterface();
-            }
+        if (dimensoesMudaram) {
+            redimensionarSimulacao(novaProfundidade, novaLargura);
+        }
+    }
 
-            for (int i = 0; i < novaProfundidade; i++) {
-                String linha = linhas.get(i);
-                for (int j = 0; j < novaLargura && j < linha.length(); j++) {
-                    char c = linha.charAt(j);
-                    if (c == 'R') {
-                        mapaFixo[i][j] = Obstaculo.RIO;
-                    } else if (c == 'P') {
-                        mapaFixo[i][j] = Obstaculo.PEDRA;
-                    }
-                }
-            }
-
-        } catch (IOException e) {
-            System.err.println("⚠️ Erro ao ler mapa.txt: " + e.getMessage());
+    /**
+     * Método auxiliar privado para lidar com a complexidade de recriar o mundo
+     * quando o tamanho do mapa muda.
+     */
+    private void redimensionarSimulacao(int novaProfundidade, int novaLargura) {
+        System.out.println("Redimensionando simulação para: " + novaProfundidade + "x" + novaLargura);
+        
+        // Recria a lógica
+        campo = new Campo(novaProfundidade, novaLargura);
+        campoAtualizado = new Campo(novaProfundidade, novaLargura);
+        
+        // Recria a interface gráfica
+        if (visualizacao != null) {
+            visualizacao.fechar();
+            visualizacao = new VisualizacaoSimulador(novaProfundidade, novaLargura);
+            
+            // Re-aplica as configurações necessárias na nova janela
+            definirCores();
+            configurarInterface();
         }
     }
 

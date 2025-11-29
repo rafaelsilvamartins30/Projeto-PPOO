@@ -1,18 +1,8 @@
-import java.util.Iterator;
-import java.util.List;
-
 /**
  * Modelo de um Gavião.
  * Caça Ratos.
- * Pode ser afetado por condições climáticas (ex: chuva).
  */
-public class Gaviao extends Animal {
-    private static final int IDADE_REPRODUTIVA = 5;
-    private static final int IDADE_MAXIMA = 70;
-    private static final double PROBABILIDADE_REPRODUCAO = 0.08;
-    private static final int TAMANHO_MAXIMO_NINHADA = 3;
-    private static final int VALOR_ALIMENTAR = 8;
-
+public class Gaviao extends Predador {
     /**
      * Cria um gavião. A idade pode ser aleatória ou zero (novo nascimento).
      * 
@@ -20,72 +10,16 @@ public class Gaviao extends Animal {
      */
     public Gaviao(boolean idadeAleatoria) {
         super(idadeAleatoria);
-        setNivelAlimento(VALOR_ALIMENTAR);
-        if (idadeAleatoria)
-            setNivelAlimento(getAleatorio().nextInt(VALOR_ALIMENTAR));
+        dieta.put(Rato.class, Configuracao.VALOR_NUTRICIONAL_RATO);
     }
 
     /**
-     * Define o comportamento do gavião em cada passo do tempo.
+     * Cria um novo gavião filhote.
      * 
-     * @param campoAtual      o campo atual
-     * @param campoAtualizado o campo atualizado
-     * @param novosGavioes    a lista onde novos gaviões serão adicionados
+     * @return Um novo gavião.
      */
     @Override
-    public void agir(Campo campoAtual, Campo campoAtualizado, List<Ator> novosGavioes) {
-        incrementarIdade();
-        incrementarFome();
-        if (estaVivo()) {
-
-            int nascimentos = reproduzir();
-            for (int i = 0; i < nascimentos; i++) {
-                Localizacao loc = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
-                if (loc != null) {
-                    Gaviao novoGaviao = new Gaviao(false);
-                    novosGavioes.add(novoGaviao);
-                    novoGaviao.definirLocalizacao(loc);
-                    campoAtualizado.colocar(novoGaviao, loc);
-                }
-            }
-            Localizacao novaLocalizacao = encontrarComida(campoAtual, getLocalizacao());
-            if (novaLocalizacao == null) {
-                novaLocalizacao = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
-            }
-            if (novaLocalizacao != null) {
-                definirLocalizacao(novaLocalizacao);
-                campoAtualizado.colocar(this, novaLocalizacao);
-            } else {
-                definirEstaVivo(false);
-            }
-        }
-    }
-
-    /**
-     * Encontra comida adjacente (Ratos). Se encontrar, come e retorna a
-     * localização.
-     * 
-     * @param campo       representando o campo atual
-     * @param localizacao do gavião
-     * @return a localização onde a comida foi encontrada, ou null se nada foi
-     *         encontrado
-     */
-    private Localizacao encontrarComida(Campo campo, Localizacao localizacao) {
-        Iterator adjacentes = campo.localizacoesAdjacentes(localizacao);
-        while (adjacentes.hasNext()) {
-            Localizacao onde = (Localizacao) adjacentes.next();
-            Object animal = campo.getObjetoEm(onde);
-            if (animal instanceof Rato) {
-                Rato rato = (Rato) animal;
-                if (rato.estaVivo()) {
-                    rato.definirEstaVivo(false);
-                    setNivelAlimento(VALOR_ALIMENTAR);
-                    return onde;
-                }
-            }
-        }
-        return null;
-    }
+    public Predador criarFilho() { return new Gaviao(false); }
 
     /**
      * A idade máxima que um gavião pode atingir.
@@ -93,8 +27,8 @@ public class Gaviao extends Animal {
      * @return A idade máxima.
      */
     @Override
-    protected int IDADE_MAXIMA() {
-        return IDADE_MAXIMA;
+    protected int idadeMaxima() {
+        return Configuracao.IDADE_MAX_GAVIAO;
     }
 
     /**
@@ -103,8 +37,8 @@ public class Gaviao extends Animal {
      * @return A probabilidade de reprodução.
      */
     @Override
-    protected double PROBABILIDADE_REPRODUCAO() {
-        return PROBABILIDADE_REPRODUCAO;
+    protected double probabilidadeReproducao() {
+        return Configuracao.PROB_REPROD_GAVIAO;
     }
 
     /**
@@ -113,8 +47,8 @@ public class Gaviao extends Animal {
      * @return O tamanho máximo da ninhada.
      */
     @Override
-    protected int TAMANHO_MAXIMO_NINHADA() {
-        return TAMANHO_MAXIMO_NINHADA;
+    protected int tamanhoMaximoNinhada() {
+        return Configuracao.MAX_NINHADA_GAVIAO;
     }
 
     /**
@@ -124,6 +58,6 @@ public class Gaviao extends Animal {
      */
     @Override
     protected int getIdadeReprodutiva() {
-        return IDADE_REPRODUTIVA;
+        return Configuracao.IDADE_REPROD_GAVIAO;
     }
 }
