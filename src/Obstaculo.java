@@ -8,10 +8,20 @@ public enum Obstaculo {
 
     private boolean contemPeixe;
 
+    /**
+     * Construtor do Obstáculo.
+     * 
+     * @param contemPeixe Se o obstáculo contém peixes.
+     */
     Obstaculo(boolean contemPeixe) {
         this.contemPeixe = contemPeixe;
     }
 
+    /**
+     * Verifica se é possível pescar neste obstáculo.
+     * 
+     * @return verdadeiro se for possível pescar, falso caso contrário.
+     */
     public boolean podePescar() {
         return contemPeixe;
     }
