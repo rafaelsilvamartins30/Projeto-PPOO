@@ -22,16 +22,8 @@ import java.awt.event.ActionEvent;
  * @author Grupo 10
  * @version 2025-11-30 (traduzido e modificado)
  */
-public class Simulador
-{
-    private static final int LARGURA_PADRAO = 120;
-    private static final int PROFUNDIDADE_PADRAO = 75;
-    private static final double PROBABILIDADE_CRIACAO_RAPOSA = 0.02;
-    private static final double PROBABILIDADE_CRIACAO_COELHO = 0.08;
-    private static final double PROBABILIDADE_CRIACAO_RATO = 0.08;
-    private static final double PROBABILIDADE_CRIACAO_COBRA = 0.03;
-    private static final double PROBABILIDADE_CRIACAO_GAVIAO = 0.02;
-    private static final double PROBABILIDADE_CRIACAO_URSO = 0.01;
+public class Simulador {
+
 
     private List<Ator> animais;
     private List<Ator> novosAnimais;
@@ -49,7 +41,7 @@ public class Simulador
      */
     public Simulador()
     {
-        this(PROFUNDIDADE_PADRAO, LARGURA_PADRAO);
+        this(Configuracao.PROFUNDIDADE_PADRAO, Configuracao.LARGURA_PADRAO);
     }
     
     public Simulador(int profundidade, int largura)
@@ -67,8 +59,8 @@ public class Simulador
         if(largura <= 0 || profundidade <= 0) {
             System.out.println("As dimensões devem ser maiores que zero.");
             System.out.println("Usando valores padrão.");
-            profundidade = PROFUNDIDADE_PADRAO;
-            largura = LARGURA_PADRAO;
+            profundidade = Configuracao.PROFUNDIDADE_PADRAO;
+            largura = Configuracao.LARGURA_PADRAO;
         }
         animais = new ArrayList<Ator>();
         novosAnimais = new ArrayList<Ator>();
@@ -98,7 +90,7 @@ public class Simulador
      * Pausa a simulação em execução.
      * A simulação pode ser continuada posteriormente com continuar().
      */
-    public void pausar() {
+    private void pausar() {
         if (emExecucao && !pausada) {
             pausada = true;
         } else if (pausada) {
@@ -239,12 +231,26 @@ public class Simulador
      */
     public void simularUmPasso()
     {
+        // Incrementa o contador de passos, limpa a lista de novos animais e aplica os obstáculos.
         passo++;
         novosAnimais.clear();
-        
         aplicarObstaculos(campoAtualizado);
-        campoAtualizado.copiarGramaDe(campo);
+
+        // Faz cada animal agir.
+        for(Iterator<Ator> iter = animais.iterator(); iter.hasNext(); ) {
+            Ator ator = iter.next();
+            if(ator.estaVivo()) {
+                ator.agir(campo, campoAtualizado, novosAnimais);
+            }
+            else {
+                iter.remove();
+            }
+        }
+        // Adiciona os novos animais à lista principal.
+        animais.addAll(novosAnimais);
         
+        // Atualiza o clima e a grama no campo atualizado.
+        campoAtualizado.copiarGramaDe(campo);
         if (clima != null) {
             clima.atualizar();
             
@@ -260,23 +266,13 @@ public class Simulador
             campoAtualizado.crescerGrama();
         }
 
-        for(Iterator<Ator> iter = animais.iterator(); iter.hasNext(); ) {
-            Ator ator = iter.next();
-            if(ator.estaVivo()) {
-                ator.agir(campo, campoAtualizado, novosAnimais);
-            }
-            else {
-                iter.remove();
-            }
-        }
-
-        animais.addAll(novosAnimais);
-        
+        // Troca os campos.
         Campo temp = campo;
         campo = campoAtualizado;
         campoAtualizado = temp;
         campoAtualizado.limpar();
 
+        // Atualiza a visualização.
         visualizacao.mostrarStatus(passo, campo);
     }
     
@@ -316,37 +312,37 @@ public class Simulador
                 
                 if(campo.getObjetoEm(linha, coluna) == null) {
                     
-                    if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_RAPOSA) {
+                    if(aleatorio.nextDouble() <= Configuracao.PROBABILIDADE_CRIACAO_RAPOSA) {
                         Raposa raposa = new Raposa(true);
                         animais.add(raposa);
                         raposa.definirLocalizacao(linha, coluna);
                         campo.colocar(raposa, linha, coluna);
                     }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_COELHO) {
+                    else if(aleatorio.nextDouble() <= Configuracao.PROBABILIDADE_CRIACAO_COELHO) {
                         Coelho coelho = new Coelho(true);
                         animais.add(coelho);
                         coelho.definirLocalizacao(linha, coluna);
                         campo.colocar(coelho, linha, coluna);
                     }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_RATO) {
+                    else if(aleatorio.nextDouble() <= Configuracao.PROBABILIDADE_CRIACAO_RATO) {
                         Rato rato = new Rato(true);
                         animais.add(rato);
                         rato.definirLocalizacao(linha, coluna);
                         campo.colocar(rato, linha, coluna);
                     }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_COBRA) {
+                    else if(aleatorio.nextDouble() <= Configuracao.PROBABILIDADE_CRIACAO_COBRA) {
                         Cobra cobra = new Cobra(true);
                         animais.add(cobra);
                         cobra.definirLocalizacao(linha, coluna);
                         campo.colocar(cobra, linha, coluna);
                     }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_GAVIAO) {
+                    else if(aleatorio.nextDouble() <= Configuracao.PROBABILIDADE_CRIACAO_GAVIAO) {
                         Gaviao gaviao = new Gaviao(true);
                         animais.add(gaviao);
                         gaviao.definirLocalizacao(linha, coluna);
                         campo.colocar(gaviao, linha, coluna);
                     }
-                    else if(aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_URSO) {
+                    else if(aleatorio.nextDouble() <= Configuracao.PROBABILIDADE_CRIACAO_URSO) {
                         Urso urso = new Urso(true);
                         animais.add(urso);
                         urso.definirLocalizacao(linha, coluna);

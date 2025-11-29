@@ -1,5 +1,3 @@
-import java.awt.Color;
-
 /**
  * Fornece um contador para um participante da simulação.
  * Inclui uma string de identificação e uma contagem de quantos

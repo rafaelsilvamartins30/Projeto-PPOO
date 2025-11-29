@@ -11,7 +11,7 @@ import java.util.Iterator;
  */
 public class EstatisticasCampo
 {
-    private HashMap contadores;
+    private HashMap<Class<?>, Contador> contadores;
     private boolean contagensValidas;
 
     /**
@@ -19,7 +19,7 @@ public class EstatisticasCampo
      */
     public EstatisticasCampo()
     {
-        contadores = new HashMap();
+        contadores = new HashMap<Class<?>, Contador>();
         contagensValidas = true;
     }
 
@@ -32,7 +32,7 @@ public class EstatisticasCampo
         if(!contagensValidas) {
             gerarContagens(campo);
         }
-        Iterator chaves = contadores.keySet().iterator();
+        Iterator<Class<?>> chaves = contadores.keySet().iterator();
         while(chaves.hasNext()) {
             Contador info = (Contador) contadores.get(chaves.next());
             buffer.append(info.getNome());
@@ -49,7 +49,7 @@ public class EstatisticasCampo
     public void reiniciar()
     {
         contagensValidas = false;
-        Iterator chaves = contadores.keySet().iterator();
+        Iterator<Class<?>> chaves = contadores.keySet().iterator();
         while(chaves.hasNext()) {
             Contador cnt = (Contador) contadores.get(chaves.next());
             cnt.reiniciar();
@@ -60,7 +60,7 @@ public class EstatisticasCampo
      * Incrementa a contagem de uma classe de animal.
      * @param classeAnimal A classe do animal a contar.
      */
-    public void incrementarContagem(Class classeAnimal)
+    public void incrementarContagem(Class<?> classeAnimal)
     {
         Contador cnt = (Contador) contadores.get(classeAnimal);
         if(cnt == null) {
@@ -89,7 +89,7 @@ public class EstatisticasCampo
         if(!contagensValidas) {
             gerarContagens(campo);
         }
-        Iterator chaves = contadores.keySet().iterator();
+        Iterator<Class<?>> chaves = contadores.keySet().iterator();
         while(chaves.hasNext()) {
             Contador info = (Contador) contadores.get(chaves.next());
             if(info.getContagem() > 0) {

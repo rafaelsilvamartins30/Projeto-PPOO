@@ -1,123 +1,73 @@
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
-public class Urso extends Animal {
-
-    private static final int IDADE_REPRODUTIVA = 10;
-    private static final int IDADE_MAXIMA = 120;
-    private static final double PROBABILIDADE_REPRODUCAO = 0.05;
-    private static final int TAMANHO_MAXIMO_NINHADA = 2;
-    private static final int VALOR_ALIMENTAR = 12;
-
+/**
+ * A classe Urso representa ursos em um campo. Os ursos caçam raposas, cobras e
+ * coelhos para se alimentar. Eles também podem pescar em rios adjacentes.
+ * 
+ * Os ursos têm uma idade reprodutiva, uma idade máxima, uma probabilidade de
+ * reprodução, um tamanho máximo de ninhada e um valor alimentar.
+ * 
+ * @author Grupo de Projeto PPOO 10
+ * @version 2025.11.30
+ */
+public class Urso extends Predador {
     /**
      * Cria um urso. A idade pode ser aleatória ou zero (novo nascimento).
+     * A dieta do urso inclui raposas, cobras e coelhos.
      * 
      * @param idadeAleatoria se verdadeiro, a idade do urso será aleatória
      */
     public Urso(boolean idadeAleatoria) {
         super(idadeAleatoria);
-
-        setNivelAlimento(VALOR_ALIMENTAR);
-
-        if (idadeAleatoria)
-            setNivelAlimento(getAleatorio().nextInt(VALOR_ALIMENTAR));
+        
+        dieta.put(Raposa.class, Configuracao.VALOR_NUTRICIONAL_RAPOSA);
+        dieta.put(Cobra.class, Configuracao.VALOR_NUTRICIONAL_COBRA);
+        dieta.put(Coelho.class, Configuracao.VALOR_NUTRICIONAL_COELHO);
     }
 
     /**
-     * Define o comportamento do urso em cada passo do tempo.
+     * O urso age: caça, se move, pesca, se reproduz e envelhece.
      * 
-     * @param campoAtual      o campo atual
-     * @param campoAtualizado o campo atualizado
-     * @param novosUrsos      a lista onde novos ursos serão adicionados
+     * @param campoAtual       O campo atual.
+     * @param campoAtualizado  O campo atualizado.
+     * @param novosUrsos A lista para adicionar novos ursos nascidos.
      */
     @Override
     public void agir(Campo campoAtual, Campo campoAtualizado, List<Ator> novosUrsos) {
-        incrementarIdade();
-        incrementarFome();
+        super.agir(campoAtual, campoAtualizado, novosUrsos);
         if (estaVivo()) {
-
             pescar(campoAtual);
-
-            int nascimentos = reproduzir();
-            for (int i = 0; i < nascimentos; i++) {
-                Localizacao loc = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
-                if (loc != null) {
-                    Urso novoUrso = new Urso(false);
-                    novosUrsos.add(novoUrso);
-                    novoUrso.definirLocalizacao(loc);
-                    campoAtualizado.colocar(novoUrso, loc);
-                }
-            }
-
-            Localizacao novaLocalizacao = encontrarComida(campoAtual, getLocalizacao());
-            if (novaLocalizacao == null) {
-                novaLocalizacao = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
-            }
-
-            if (novaLocalizacao != null) {
-                definirLocalizacao(novaLocalizacao);
-                campoAtualizado.colocar(this, novaLocalizacao);
-            } else {
-                definirEstaVivo(false);
-            }
         }
     }
 
-    private void pescar(Campo campo) {
-        Iterator adjacentes = campo.localizacoesAdjacentes(getLocalizacao());
-        while (adjacentes.hasNext()) {
-            Localizacao onde = (Localizacao) adjacentes.next();
-            Object coisa = campo.getObjetoEm(onde);
-            if (coisa instanceof Obstaculo && coisa == Obstaculo.RIO) {
+    /**
+     * Cria um novo urso filhote.
+     * 
+     * @return Um novo urso.
+     */
+    @Override
+    public Predador criarFilho() { return new Urso(false); }
 
-                if (new Random().nextDouble() < 0.30) {
-                    setNivelAlimento(VALOR_ALIMENTAR);
+    /**
+     * Tenta pescar em um rio adjacente com 30% de chance de ser bem sucedido. Se tiver sucesso, aumenta o nível de
+     * alimento.
+     * 
+     * @param campo representando o campo atual.
+     */
+    private void pescar(Campo campo) {
+        Iterator<Localizacao> adjacentes = campo.localizacoesAdjacentes(getLocalizacao());
+        while (adjacentes.hasNext()) {
+            Localizacao onde = adjacentes.next();
+            Object pescavel = campo.getObjetoEm(onde);
+            if (pescavel instanceof Obstaculo && ((Obstaculo)pescavel).podePescar()) {
+
+                if (getAleatorio().nextDouble() < Configuracao.PROB_PESCA_URSO) {
+                    setNivelAlimento(Configuracao.VALOR_ALIMENTAR);
                 }
                 return;
             }
         }
-    }
-
-    /**
-     * Encontra comida adjacente (Raposa, Cobra ou Coelho). Se encontrar, come e
-     * retorna a localização.
-     * 
-     * @param campo       representando o campo atual.
-     * @param localizacao do urso.
-     * @return a localização onde a comida foi encontrada, ou null se nada foi
-     *         encontrado.
-     */
-    private Localizacao encontrarComida(Campo campo, Localizacao localizacao) {
-        Iterator adjacentes = campo.localizacoesAdjacentes(localizacao);
-        while (adjacentes.hasNext()) {
-            Localizacao onde = (Localizacao) adjacentes.next();
-            Object animal = campo.getObjetoEm(onde);
-
-            if (animal instanceof Raposa) {
-                Raposa raposa = (Raposa) animal;
-                if (raposa.estaVivo()) {
-                    raposa.definirEstaVivo(false);
-                    setNivelAlimento(VALOR_ALIMENTAR);
-                    return onde;
-                }
-            } else if (animal instanceof Cobra) {
-                Cobra cobra = (Cobra) animal;
-                if (cobra.estaVivo()) {
-                    cobra.definirEstaVivo(false);
-                    setNivelAlimento(VALOR_ALIMENTAR);
-                    return onde;
-                }
-            } else if (animal instanceof Coelho) {
-                Coelho coelho = (Coelho) animal;
-                if (coelho.estaVivo()) {
-                    coelho.definirEstaVivo(false);
-                    setNivelAlimento(VALOR_ALIMENTAR);
-                    return onde;
-                }
-            }
-        }
-        return null;
     }
 
     /**
@@ -126,8 +76,8 @@ public class Urso extends Animal {
      * @return A idade reprodutiva.
      */
     @Override
-    protected int IDADE_MAXIMA() {
-        return IDADE_MAXIMA;
+    protected int idadeMaxima() {
+        return Configuracao.IDADE_MAX_URSO;
     }
 
     /**
@@ -136,8 +86,8 @@ public class Urso extends Animal {
      * @return A probabilidade de reprodução.
      */
     @Override
-    protected double PROBABILIDADE_REPRODUCAO() {
-        return PROBABILIDADE_REPRODUCAO;
+    protected double probabilidadeReproducao() {
+        return Configuracao.PROB_REPROD_URSO;
     }
 
     /**
@@ -146,8 +96,8 @@ public class Urso extends Animal {
      * @return O tamanho máximo da ninhada.
      */
     @Override
-    protected int TAMANHO_MAXIMO_NINHADA() {
-        return TAMANHO_MAXIMO_NINHADA;
+    protected int tamanhoMaximoNinhada() {
+        return Configuracao.MAX_NINHADA_URSO;
     }
 
     /**
@@ -156,7 +106,5 @@ public class Urso extends Animal {
      * @return A idade reprodutiva.
      */
     @Override
-    protected int getIdadeReprodutiva() {
-        return IDADE_REPRODUTIVA;
-    }
+    protected int getIdadeReprodutiva() { return Configuracao.IDADE_REPROD_URSO; }
 }
