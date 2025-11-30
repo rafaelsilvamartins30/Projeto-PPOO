@@ -1,118 +1,102 @@
 import java.awt.Color;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
 /**
  * Uma simulação simples de um ecossistema.
- * Cria e gerencia o campo, os animais, o clima e a interface gráfica.
- * Permite pausar, continuar e reiniciar a simulação.
- * A simulação pode ser executada por um número especificado de passos.
- * 
- * VERSÃO MODIFICADA: Inclui sistema de clima e controles de pausa/continuar.
+ * Esta simulação envolve predadores e presas que interagem em um campo.
+ * O campo também contém grama que cresce e pode ser comida por herbívoros.
+ * O clima afeta o crescimento da grama.
+ * A simulação pode ser pausada, continuada e reiniciada.
+ * Os obstáculos fixos podem ser carregados de um arquivo de texto para definir o terreno.
  * 
  * @author David J. Barnes e Michael Kolling
  * @author Grupo 10
  * @version 2025-11-30 (traduzido e modificado)
  */
 public class Simulador {
-    // As variáveis estáticas finais representam as configurações da simulação.
 
-    // Largura padrão da grade.
-    private static final int LARGURA_PADRAO = 120;
-    // Profundidade padrão da grade.
-    private static final int PROFUNDIDADE_PADRAO = 75;
-    // Probabilidade de que uma raposa seja criada em uma posição da grade.
-    private static final double PROBABILIDADE_CRIACAO_RAPOSA = 0.02;
-    // Probabilidade de que um coelho seja criado em uma posição da grade.
-    private static final double PROBABILIDADE_CRIACAO_COELHO = 0.08;
-    // Probabilidade de que um rato seja criado em uma posição da grade.
-    private static final double PROBABILIDADE_CRIACAO_RATO = 0.08;
-    // Probabilidade de que uma cobra seja criada em uma posição da grade.
-    private static final double PROBABILIDADE_CRIACAO_COBRA = 0.03;
-    // Probabilidade de que um gavião seja criado em uma posição da grade.
-    private static final double PROBABILIDADE_CRIACAO_GAVIAO = 0.02;
-    // Probabilidade de que um urso seja criado em uma posição da grade.
-    private static final double PROBABILIDADE_CRIACAO_URSO = 0.01;
-
-    // Lista de animais no campo.
     private List<Ator> animais;
-    // Lista de animais recém-nascidos.
     private List<Ator> novosAnimais;
-    // Estado atual do campo.
     private Campo campo;
-    // Segundo campo, usado para construir o próximo estágio da simulação.
     private Campo campoAtualizado;
-    // Passo atual da simulação.
     private int passo;
-    // Visualização gráfica da simulação.
     private Desenhavel visualizacao;
-    // Sistema de clima da simulação
     private Clima clima;
-    // Controle de pausa da simulação
     private boolean pausada;
-    // Indica se a simulação está em execução
     private boolean emExecucao;
+    private Obstaculo[][] mapaFixo;
+    private EstatisticasCampo estatisticas;
     
-
-    /**
+/**
      * Constrói um campo de simulação com tamanho padrão.
      */
     public Simulador() {
-        // Não passa dimensões - deixa o construtor principal descobrir do mapa
-        CarregadorMapa temp = new CarregadorMapa();
-        int prof = PROFUNDIDADE_PADRAO;
-        int larg = LARGURA_PADRAO;
-
-        if (temp.carregar("mapa.txt")) {
-            prof = temp.getAltura();
-            larg = temp.getLargura();
-        }
-
-        // Cria a visualização com as dimensões corretas ANTES de chamar o construtor
-        // completo
-        Desenhavel vis = new VisualizacaoSimulador(prof, larg);
-
-        // Agora chama o construtor que faz o setup completo
-        this(prof, larg, vis);
+        this(Configuracao.PROFUNDIDADE_PADRAO, Configuracao.LARGURA_PADRAO);
     }
-
+    
+    /**
+     * Cria um campo de simulação com o tamanho especificado.
+     * Este é o ponto de entrada principal que cria as dependências.
+     */
     public Simulador(int profundidade, int largura) {
-        this(profundidade, largura, new VisualizacaoSimulador(profundidade, largura));
+        // 1. Cria a estatística aqui para ela nascer antes de todo mundo
+        this(profundidade, largura, new EstatisticasCampo());
     }
 
     /**
-     * Cria um campo de simulação com o tamanho especificado.
-     * 
-     * @param profundidade Profundidade do campo. Deve ser maior que zero.
-     * @param largura      Largura do campo. Deve ser maior que zero.
+     * CONSTRUTOR AUXILIAR (Privado)
+     * Serve apenas para criar a Visualização injetando a estatística que acabamos de criar.
      */
-    public Simulador(int profundidade, int largura, Desenhavel visualizacao) {
-        // Primeiro, tenta carregar o mapa para descobrir as dimensões reais
-        CarregadorMapa carregador = new CarregadorMapa();
-        if (carregador.carregar("mapa.txt")) {
-            // Se conseguiu carregar, usa as dimensões do mapa
-            profundidade = carregador.getAltura();
-            largura = carregador.getLargura();
-            System.out.println("📐 Usando dimensões do mapa: " + profundidade + "x" + largura);
-        } else if (largura <= 0 || profundidade <= 0) {
+    private Simulador(int profundidade, int largura, EstatisticasCampo estatisticasCompartilhada) {
+        this(profundidade, largura, 
+             new VisualizacaoSimulador(profundidade, largura, estatisticasCompartilhada), 
+             estatisticasCompartilhada);
+    }
+
+    /**
+     * O "Construtor Mestre" (Master Constructor).
+     * Agora ele recebe tudo pronto e apenas atribui.
+     */
+    public Simulador(int profundidade, int largura, Desenhavel visualizacao, EstatisticasCampo estatisticas) {   
+        // Verifica se as dimensões são válidas
+        if(largura <= 0 || profundidade <= 0) {
             System.out.println("As dimensões devem ser maiores que zero.");
             System.out.println("Usando valores padrão.");
-            profundidade = PROFUNDIDADE_PADRAO;
-            largura = LARGURA_PADRAO;
+            profundidade = Configuracao.PROFUNDIDADE_PADRAO;
+            largura = Configuracao.LARGURA_PADRAO;
         }
-
+        
+        // --- INJEÇÃO DE DEPENDÊNCIA ---
+        this.estatisticas = estatisticas; // Agora o Simulador tem a MESMA instância da View!
+        this.visualizacao = visualizacao;
+        
+        // Inicializa listas e campos
         animais = new ArrayList<Ator>();
         novosAnimais = new ArrayList<Ator>();
         campo = new Campo(profundidade, largura);
         campoAtualizado = new Campo(profundidade, largura);
-
-        // Cria uma visualização do estado de cada posição no campo.
-        this.visualizacao = visualizacao;
+        
+        definirCores();
+        
+        // Inicializa clima e estado da simulação
+        this.clima = new Clima(50);
+        this.pausada = false;
+        this.emExecucao = false;
+        
+        // Carrega o mapa de obstáculos
+        carregarMapa("mapa.txt");
+        
+        reiniciar();
+        
+        // Configura os botões da interface
+        configurarInterface();
+    }
+    
+    private void definirCores() {
         this.visualizacao.definirCor(Raposa.class, Color.blue);
         this.visualizacao.definirCor(Coelho.class, Color.orange);
         this.visualizacao.definirCor(Rato.class, Color.MAGENTA);
@@ -120,34 +104,25 @@ public class Simulador {
         this.visualizacao.definirCor(Gaviao.class, Color.RED);
         this.visualizacao.definirCor(Urso.class, Color.BLACK);
 
-        // Inicializa o sistema de clima (muda a cada 50 ciclos por padrão)
-        this.clima = new Clima(50);
+        visualizacao.definirCor(Obstaculo.RIO, Color.CYAN);
+        visualizacao.definirCor(Obstaculo.PEDRA, Color.DARK_GRAY);
 
-        // Inicializa controles
-        this.pausada = false;
-        this.emExecucao = false;
-
-        // Configura o ponto inicial da simulação.
-        reiniciar();
-
-        // Configura os listeners dos botões
-        configurarInterface();
+        if (visualizacao instanceof VisualizacaoSimulador) {
+            ((VisualizacaoSimulador) visualizacao).adicionarClasseIgnorada(Obstaculo.class);
+        }
     }
-
-    // ===== MÉTODOS DE CONTROLE DE SIMULAÇÃO =====
 
     /**
      * Pausa a simulação em execução.
      * A simulação pode ser continuada posteriormente com continuar().
      */
-    public void pausar() {
+    private void pausar() {
         if (emExecucao && !pausada) {
             pausada = true;
-            System.out.println("⏸️  Simulação PAUSADA no passo " + passo);
         } else if (pausada) {
-            System.out.println("⚠️  A simulação já está pausada.");
+            // Simulação já está pausada
         } else {
-            System.out.println("⚠️  Não há simulação em execução para pausar.");
+            // Não há simulação em execução para pausar
         }
     }
 
@@ -157,11 +132,10 @@ public class Simulador {
     public void continuar() {
         if (pausada) {
             pausada = false;
-            System.out.println("▶️  Simulação CONTINUADA a partir do passo " + passo);
         } else if (emExecucao) {
-            System.out.println("⚠️  A simulação já está em execução.");
+            // Simulação já está em execução
         } else {
-            System.out.println("⚠️  Não há simulação pausada para continuar.");
+            // Não há simulação pausada para continuar
         }
     }
 
@@ -187,46 +161,31 @@ public class Simulador {
      * Reinicia completamente a simulação para o estado inicial.
      * Remove todos os animais, limpa o campo, reinicia o clima e reseta contadores.
      */
-    public void reiniciar() {
-        System.out.println("\n🔄 REINICIANDO SIMULAÇÃO...");
-
-        // Reseta o passo
+    public void reiniciar()
+    {
         passo = 0;
-
-        // Limpa todas as listas de animais
+        // Limpa todas as listas e campos
         animais.clear();
         novosAnimais.clear();
-
-        // Limpa os campos
+        
+        // Limpa os campos de simulação
         campo.limpar();
         campoAtualizado.limpar();
-
         // Reinicia o clima
         if (clima != null) {
             clima.reiniciar();
         }
-
-        // Reseta controles
-        pausada = true;
-
-        // Atualiza o texto do botão quando começamos uma nova simulação
-        visualizacao.setTextoBotaoPausa("Iniciar");
-
-        // Popula novamente o campo
-        popular(campo);
-
-        // Reinicia a visualização
+        // Define o estado como não pausado
+        pausada = false;
+        visualizacao.setTextoBotaoPausa("Pausar");
+        // Aplica obstáculos fixos e popula o campo
+        aplicarObstaculos(campo);
+        new Populador().popular(campo, animais);
+        // Reinicia a visualização e mostra o estado inicial
         visualizacao.reiniciar();
-
-        // Mostra o estado inicial
         visualizacao.mostrarStatus(passo, campo);
-
-        System.out.println("✅ Simulação reiniciada com sucesso!");
-        System.out.println("📊 Total de animais: " + animais.size());
     }
-
-    // ===== MÉTODOS DE CLIMA =====
-
+    
     /**
      * Retorna o sistema de clima da simulação.
      * 
@@ -244,18 +203,7 @@ public class Simulador {
     public void setClima(Clima clima) {
         this.clima = clima;
     }
-
-    // ===== MÉTODOS DE SIMULAÇÃO =====
-
-    /**
-     * Executa a simulação a partir do estado atual por um período razoavelmente
-     * longo,
-     * por exemplo, 500 passos.
-     */
-    public void executarSimulacaoLonga() {
-        simular(500);
-    }
-
+    
     /**
      * Executa a simulação a partir do estado atual pelo número de passos indicado.
      * Interrompe antes se a simulação deixar de ser viável.
@@ -265,34 +213,23 @@ public class Simulador {
      */
     public void simular(int numPassos) {
         emExecucao = true;
-        System.out.println("\n▶️  Iniciando loop de simulação...");
-
-        // O loop roda enquanto o programa estiver aberto (emExecucao = true)
-        while (emExecucao) {
-
-            // Verifica se atingiu o limite de passos do objetivo atual
-            // Note que usamos >= para garantir que ele pare EXATAMENTE no limite
+        
+        while(emExecucao) {
+            
             if (passo >= numPassos) {
-                // Só avisa e pausa se ainda não estiver pausado
                 if (!pausada) {
-                    System.out.println("🏁 Limite de " + numPassos + " passos atingido. Pausando...");
                     pausar();
                     visualizacao.setTextoBotaoPausa("Continuar");
                 }
             }
 
-            // Verifica se o jogo acabou (todos morreram)
             if (!visualizacao.ehViavel(campo)) {
                 if (!pausada) {
-                    System.out.println("❌ Todos os animais morreram. Pausando...");
-                    pausar();
-                    visualizacao.setTextoBotaoPausa("Continuar");
+                    pausar(); 
+                    visualizacao.setTextoBotaoPausa("Continuar"); 
                 }
             }
 
-            // Loop de espera (Pausa)
-            // Se estiver pausado, o programa fica preso aqui esperando você clicar
-            // "Continuar"
             while (pausada) {
                 try {
                     Thread.sleep(100);
@@ -300,73 +237,92 @@ public class Simulador {
                     e.printStackTrace();
                 }
             }
-
-            // Se não estiver pausado, executa um passo
+            
             simularUmPasso();
-
-            // Pequeno delay para a animação não ser instantânea
-            try {
-                Thread.sleep(50);
-            } catch (Exception e) {
-            }
+            
+            try { Thread.sleep(50); } catch (Exception e) {}
         }
-
-        System.out.println("\n✅ Loop de simulação encerrado.");
     }
 
     /**
      * Simula um único passo da simulação.
-     * Atualiza o estado de todos os animais, o clima e a grama.
-     * Atualiza a visualização ao final do passo.
+     * Atualiza o clima, processa o ciclo de vida dos animais e atualiza a visualização.
      */
     public void simularUmPasso() {
         passo++;
+        prepararNovosAnimais();
+        prepararObstaculos();
+        processarCicloDeVidaAnimais();
+        processarAmbienteEClima();
+        trocarCampos();
+        visualizacao.mostrarStatus(passo, campo);
+    }
+
+    /**
+     * Limpa a lista de nascimentos e aplica obstáculos fixos no campo de destino.
+     */
+    private void prepararNovosAnimais() {
         novosAnimais.clear();
+    }
+    /**
+     * Aplica os obstáculos fixos no campo atualizado.
+     */
+    private void prepararObstaculos() {
+        aplicarObstaculos(campoAtualizado);
+    }
 
-        // CORREÇÃO: Reaplica os obstáculos do mapa original
-        CarregadorMapa carregador = new CarregadorMapa();
-        if (carregador.carregar("mapa.txt")) {
-            carregador.aplicarAoCampo(campoAtualizado);
-        }
-
-        campoAtualizado.copiarGramaDe(campo);
-
-        // Lógica de Clima e Crescimento da Grama
-        if (clima != null) {
-            clima.atualizar();
-            campoAtualizado.crescerGrama();
-            if (clima.estaChuvoso()) {
-                campoAtualizado.crescerGrama();
-            }
-            String textoClima = clima.estaChuvoso() ? "Clima: CHUVOSO (Crescimento Rápido)" : "Clima: NORMAL";
-            visualizacao.setInfoClima(textoClima, clima.estaChuvoso());
-        } else {
-            campoAtualizado.crescerGrama();
-        }
-
-        // Permite que todos os animais ajam
-        for (Iterator<Ator> iter = animais.iterator(); iter.hasNext();) {
+    /**
+     * Itera sobre todos os animais: faz agir, remove os mortos e registra os nascimentos.
+     */
+    private void processarCicloDeVidaAnimais() {
+        Iterator<Ator> iter = animais.iterator();
+        while(iter.hasNext()) {
             Ator ator = iter.next();
             if (ator.estaVivo()) {
                 ator.agir(campo, campoAtualizado, novosAnimais);
-            } else {
+            }
+            else {
                 iter.remove();
             }
         }
-
-        // Finalização do passo
+        // Adiciona os filhotes nascidos neste turno
         animais.addAll(novosAnimais);
+    }
 
+    /**
+     * Gerencia o crescimento da grama e as mudanças climáticas.
+     */
+    private void processarAmbienteEClima() {
+        campoAtualizado.copiarGramaDe(campo);
+        
+        // Se não houver sistema de clima, apenas cresce a grama normalmente
+        if (clima == null) {
+            campoAtualizado.crescerGrama();
+            return;
+        }
+
+        // Atualiza clima e aplica efeitos
+        clima.atualizar();
+        campoAtualizado.crescerGrama();
+        
+        // Se chover, a grama cresce uma segunda vez (dobro da velocidade)
+        if(clima.estaChuvoso()) {
+            campoAtualizado.crescerGrama();
+        }
+
+        // Atualiza a interface com o estado do clima
+        String textoClima = clima.estaChuvoso() ? "Clima: CHUVOSO (Crescimento Rápido)" : "Clima: NORMAL";
+        visualizacao.setInfoClima(textoClima, clima.estaChuvoso());
+    }
+
+    /**
+     * Troca as referências dos campos para o próximo passo.
+     */
+    private void trocarCampos() {
         Campo temp = campo;
         campo = campoAtualizado;
         campoAtualizado = temp;
         campoAtualizado.limpar();
-
-        visualizacao.mostrarStatus(passo, campo);
-
-        if (passo % 10 == 0 && clima != null) {
-            System.out.println("Passo " + passo + " - " + clima + " | Animais: " + animais.size());
-        }
     }
 
     /**
@@ -384,7 +340,7 @@ public class Simulador {
      * @return Lista de atores
      */
     public List<Ator> getAnimais() {
-        return new ArrayList<>(animais); // Retorna cópia para segurança
+        return new ArrayList<>(animais);
     }
 
     /**
@@ -397,67 +353,9 @@ public class Simulador {
     }
 
     /**
-     * Popula o campo com animais, respeitando os obstáculos carregados.
-     * 
-     * @param campo O campo a ser populado
-     */
-    private void popular(Campo campo) {
-        Random aleatorio = new Random();
-        campo.limpar();
-        CarregadorMapa carregadorMapa = new CarregadorMapa();
-        carregadorMapa.carregar("mapa.txt");
-        carregadorMapa.aplicarAoCampo(campo);
-
-        for (int linha = 0; linha < campo.getProfundidade(); linha++) {
-            for (int coluna = 0; coluna < campo.getLargura(); coluna++) {
-
-                // Só coloca animal se não houver obstáculo (null)
-                if (campo.getObjetoEm(linha, coluna) == null) {
-
-                    if (aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_RAPOSA) {
-                        Raposa raposa = new Raposa(true);
-                        animais.add(raposa);
-                        raposa.definirLocalizacao(linha, coluna);
-                        campo.colocar(raposa, linha, coluna);
-                    } else if (aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_COELHO) {
-                        Coelho coelho = new Coelho(true);
-                        animais.add(coelho);
-                        coelho.definirLocalizacao(linha, coluna);
-                        campo.colocar(coelho, linha, coluna);
-                    }
-                    // --- NOVOS ANIMAIS ---
-                    else if (aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_RATO) {
-                        Rato rato = new Rato(true);
-                        animais.add(rato);
-                        rato.definirLocalizacao(linha, coluna);
-                        campo.colocar(rato, linha, coluna);
-                    } else if (aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_COBRA) {
-                        Cobra cobra = new Cobra(true);
-                        animais.add(cobra);
-                        cobra.definirLocalizacao(linha, coluna);
-                        campo.colocar(cobra, linha, coluna);
-                    } else if (aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_GAVIAO) {
-                        Gaviao gaviao = new Gaviao(true);
-                        animais.add(gaviao);
-                        gaviao.definirLocalizacao(linha, coluna);
-                        campo.colocar(gaviao, linha, coluna);
-                    } else if (aleatorio.nextDouble() <= PROBABILIDADE_CRIACAO_URSO) {
-                        Urso urso = new Urso(true);
-                        animais.add(urso);
-                        urso.definirLocalizacao(linha, coluna);
-                        campo.colocar(urso, linha, coluna);
-                    }
-                }
-            }
-        }
-        Collections.shuffle(animais);
-    }
-
-    /**
      * Configura os listeners dos botões usando Classes Anônimas.
      */
     private void configurarInterface() {
-        // Botão Pausar/Continuar (Simples)
         visualizacao.setAcaoPausar(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -470,28 +368,79 @@ public class Simulador {
                 }
             }
         });
-
-        // Botão Reiniciar
+        // Listener para o botão Reiniciar
         visualizacao.setAcaoReiniciar(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Manda pausar
-                pausar();
-
-                // SEGURANÇA: Espera um pouquinho (200ms) para garantir
-                // que o loop da simulação entrou no estado de pausa
-                // antes de limparmos as listas de animais.
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException ex) {
-                }
-
-                // Agora é seguro limpar e recriar tudo
+                pausar(); 
+                
+                try { Thread.sleep(200); } catch (InterruptedException ex) {}
+                
                 reiniciar();
-
-                // 4. Atualiza o botão visualmente
-                visualizacao.setTextoBotaoPausa("Iniciar");
+                
+                visualizacao.setTextoBotaoPausa("Pausar");
             }
         });
+    }
+
+    /**
+     * Carrega o mapa e ajusta a simulação se necessário.
+     */
+    private void carregarMapa(String caminhoArquivo) {
+        // 1. Delegamos a leitura para a classe especialista (CarregadorMapa)
+        CarregadorMapa carregador = new CarregadorMapa();
+        Obstaculo[][] novoMapa = carregador.carregarObstaculos(caminhoArquivo);
+
+        if (novoMapa == null) return; // Se falhou, mantém o atual
+
+        this.mapaFixo = novoMapa;
+
+        // 2. Verificamos se as dimensões mudaram
+        int novaProfundidade = novoMapa.length;
+        int novaLargura = novoMapa[0].length;
+        
+        boolean dimensoesMudaram = (novaProfundidade != campo.getProfundidade()) || 
+                                   (novaLargura != campo.getLargura());
+
+        if (dimensoesMudaram) {
+            redimensionarSimulacao(novaProfundidade, novaLargura);
+        }
+    }
+
+    /**
+     * Método auxiliar privado para lidar com a complexidade de recriar o mundo
+     * quando o tamanho do mapa muda.
+     */
+    private void redimensionarSimulacao(int novaProfundidade, int novaLargura) {
+        System.out.println("Redimensionando simulação para: " + novaProfundidade + "x" + novaLargura);
+        
+        // Recria a lógica
+        campo = new Campo(novaProfundidade, novaLargura);
+        campoAtualizado = new Campo(novaProfundidade, novaLargura);
+        
+        // Recria a interface gráfica
+        if (visualizacao != null) {
+            visualizacao.fechar();
+            visualizacao = new VisualizacaoSimulador(novaProfundidade, novaLargura, estatisticas);
+            
+            // Re-aplica as configurações necessárias na nova janela
+            definirCores();
+            configurarInterface();
+        }
+    }
+
+    /**
+     * Copia os obstáculos fixos para o campo destino.
+     */
+    private void aplicarObstaculos(Campo destino) {
+        if (mapaFixo == null) return;
+        
+        for (int i = 0; i < destino.getProfundidade(); i++) {
+            for (int j = 0; j < destino.getLargura(); j++) {
+                if (mapaFixo[i][j] != null) {
+                    destino.colocar(mapaFixo[i][j], i, j);
+                }
+            }
+        }
     }
 }

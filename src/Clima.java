@@ -16,19 +16,14 @@ public class Clima {
         CHUVOSO
     }
     
-    // Estado atual do clima
     private EstadoClima estadoAtual;
     
-    // Gerador de números aleatórios
     private Random aleatorio;
     
-    // Contador de ciclos desde a última mudança de clima
     private int ciclosDesdeUltimaMudanca;
     
-    // Número de ciclos necessários para possível mudança de clima
     private int ciclosParaMudanca;
     
-    // Probabilidade de mudança quando atinge o número de ciclos (0.0 a 1.0)
     private static final double PROBABILIDADE_MUDANCA = 0.5;
     
     /**
@@ -46,7 +41,7 @@ public class Clima {
      * Construtor alternativo com valor padrão de 50 ciclos
      */
     public Clima() {
-        this(50); // Por padrão, verifica mudança a cada 50 ciclos
+        this(50);
     }
     
     /**
@@ -56,12 +51,10 @@ public class Clima {
     public void atualizar() {
         ciclosDesdeUltimaMudanca++;
         
-        // Verifica se chegou o momento de tentar mudar o clima
         if (ciclosDesdeUltimaMudanca >= ciclosParaMudanca) {
-            // Tenta mudar o clima com base na probabilidade
             if (aleatorio.nextDouble() <= PROBABILIDADE_MUDANCA) {
                 mudarClima();
-                ciclosDesdeUltimaMudanca = 0; // Reinicia o contador
+                ciclosDesdeUltimaMudanca = 0;
             }
         }
     }
@@ -72,10 +65,8 @@ public class Clima {
     private void mudarClima() {
         if (estadoAtual == EstadoClima.NORMAL) {
             estadoAtual = EstadoClima.CHUVOSO;
-            System.out.println("☔ O clima mudou para CHUVOSO!");
         } else {
             estadoAtual = EstadoClima.NORMAL;
-            System.out.println("☀️ O clima mudou para NORMAL!");
         }
     }
     
@@ -101,7 +92,6 @@ public class Clima {
     public void reiniciar() {
         this.estadoAtual = EstadoClima.NORMAL;
         this.ciclosDesdeUltimaMudanca = 0;
-        System.out.println("🌤️ Clima reiniciado para NORMAL");
     }
     
     /**

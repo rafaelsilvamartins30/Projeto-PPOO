@@ -5,15 +5,14 @@ import java.util.Iterator;
  * Esta classe coleta e fornece dados estatísticos sobre o estado
  * de um campo. Ela é flexível: cria e mantém um contador
  * para qualquer classe de objeto encontrada dentro do campo.
- * 
- * @author David J. Barnes e Michael Kolling
+ * * @author David J. Barnes e Michael Kolling
  * @version 2002-04-23 (traduzido)
  */
 public class EstatisticasCampo
 {
-    // Contadores para cada tipo de entidade na simulação.
-    private HashMap contadores;
-    // Indica se os contadores estão atualizados no momento.
+    // Mapeia uma classe de animal para um objeto Contador
+    private HashMap<Class<?>, Contador> contadores;
+    // Flag para saber se as contagens estão atualizadas
     private boolean contagensValidas;
 
     /**
@@ -21,23 +20,23 @@ public class EstatisticasCampo
      */
     public EstatisticasCampo()
     {
-        // Cria uma coleção de contadores para cada tipo de animal encontrado.
-        contadores = new HashMap();
+        contadores = new HashMap<Class<?>, Contador>();
         contagensValidas = true;
     }
 
     /**
+     * Entrega uma descrição textual das populações de animais no campo.
      * @return Uma string descrevendo quais animais estão no campo.
      */
-    public String getDetalhesPopulacao(Campo campo)
+    public String getDetalhesPopulacao(GradeVisualizavel grade)
     {
         StringBuffer buffer = new StringBuffer();
         if(!contagensValidas) {
-            gerarContagens(campo);
+            gerarContagens(grade);
         }
-        Iterator chaves = contadores.keySet().iterator();
+        Iterator<Class<?>> chaves = contadores.keySet().iterator();
         while(chaves.hasNext()) {
-            Contador info = (Contador) contadores.get(chaves.next());
+            Contador info = contadores.get(chaves.next());
             buffer.append(info.getNome());
             buffer.append(": ");
             buffer.append(info.getContagem());
@@ -47,14 +46,30 @@ public class EstatisticasCampo
     }
     
     /**
+     * Retorna a contagem atual de uma classe específica de animal.
+     * Utilizado pela visualização para gerar legendas dinâmicas.
+     * * @param classeAnimal A classe do animal a ser consultada.
+     * @return O número de animais dessa classe.
+     */
+    public int getContagem(Class<?> classeAnimal)
+    {
+        Contador cnt = contadores.get(classeAnimal);
+        if(cnt != null) {
+            return cnt.getContagem();
+        } else {
+            return 0;
+        }
+    }
+
+    /**
      * Invalida o conjunto atual de estatísticas; reinicia todas as contagens para zero.
      */
     public void reiniciar()
     {
         contagensValidas = false;
-        Iterator chaves = contadores.keySet().iterator();
+        Iterator<Class<?>> chaves = contadores.keySet().iterator();
         while(chaves.hasNext()) {
-            Contador cnt = (Contador) contadores.get(chaves.next());
+            Contador cnt = contadores.get(chaves.next());
             cnt.reiniciar();
         }
     }
@@ -63,12 +78,12 @@ public class EstatisticasCampo
      * Incrementa a contagem de uma classe de animal.
      * @param classeAnimal A classe do animal a contar.
      */
-    public void incrementarContagem(Class classeAnimal)
+    public void incrementarContagem(Class<?> classeAnimal)
     {
-        Contador cnt = (Contador) contadores.get(classeAnimal);
+        Contador cnt = contadores.get(classeAnimal);
         if(cnt == null) {
-            // Ainda não há um contador para essa espécie — cria um.
-            cnt = new Contador(classeAnimal.getName());
+            // Assume-se que a classe tem um nome legível ou usamos o nome da classe
+            cnt = new Contador(classeAnimal.getSimpleName());
             contadores.put(classeAnimal, cnt);
         }
         cnt.incrementar();
@@ -87,16 +102,15 @@ public class EstatisticasCampo
      * Ou seja, se deve continuar a ser executada.
      * @return Verdadeiro se houver mais de uma espécie viva.
      */
-    public boolean ehViavel(Campo campo)
+    public boolean ehViavel(GradeVisualizavel grade)
     {
-        // Quantas contagens são diferentes de zero.
         int naoZero = 0;
         if(!contagensValidas) {
-            gerarContagens(campo);
+            gerarContagens(grade);
         }
-        Iterator chaves = contadores.keySet().iterator();
+        Iterator<Class<?>> chaves = contadores.keySet().iterator();
         while(chaves.hasNext()) {
-            Contador info = (Contador) contadores.get(chaves.next());
+            Contador info = contadores.get(chaves.next());
             if(info.getContagem() > 0) {
                 naoZero++;
             }
@@ -108,14 +122,14 @@ public class EstatisticasCampo
      * Gera contagens do número de animais.
      * Essas contagens não são mantidas atualizadas conforme os animais
      * são colocados no campo, mas apenas quando há uma solicitação
-     * por essas informações.
+     * por essas informações explicitamente via este método.
      */
-    private void gerarContagens(Campo campo)
+    private void gerarContagens(GradeVisualizavel grade)
     {
         reiniciar();
-        for(int linha = 0; linha < campo.getProfundidade(); linha++) {
-            for(int coluna = 0; coluna < campo.getLargura(); coluna++) {
-                Object animal = campo.getObjetoEm(linha, coluna);
+        for(int linha = 0; linha < grade.getProfundidade(); linha++) {
+            for(int coluna = 0; coluna < grade.getLargura(); coluna++) {
+                Object animal = grade.getObjetoEm(linha, coluna);
                 if(animal != null) {
                     incrementarContagem(animal.getClass());
                 }

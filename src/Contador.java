@@ -1,5 +1,3 @@
-import java.awt.Color;
-
 /**
  * Fornece um contador para um participante da simulação.
  * Inclui uma string de identificação e uma contagem de quantos
@@ -10,9 +8,7 @@ import java.awt.Color;
  */
 public class Contador
 {
-    // Um nome para este tipo de participante da simulação.
     private String nome;
-    // Quantos desse tipo existem na simulação.
     private int contagem;
 
     /**

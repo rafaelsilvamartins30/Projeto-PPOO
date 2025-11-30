@@ -10,7 +10,7 @@ public interface Ator {
      * @param campoAtualizado O campo onde o ator deve se mover.
      * @param lista A lista para adicionar novos atores nascidos.
      */
-    void agir(Campo campoAtual, Campo campoAtualizado, List<Ator> lista);
+    void agir(CampoInterativo campoAtual, CampoInterativo campoAtualizado, List<Ator> lista);
 
     /**
      * Verifica se o ator está vivo.

@@ -7,31 +7,25 @@ import java.util.Random;
  * Representa o campo onde os animais vivem.
  * O campo é uma grade retangular de localizações.
  * Cada localização pode conter um único animal ou obstáculo.
+ * As plantas (grama) também crescem no campo, mas não ocupam espaço
  * 
- * --- NOVIDADE: Gerenciamento de Grama ---
- * Agora o campo também gerencia o crescimento da grama,
- * que pode ser comida por alguns animais.
  * 
  * @author David J. Barnes e Michael Kolling
- * @version 2002-04-23
+ * @author Grupo 10 - PPOO
+ * @version 2025-11
  */
-public class Campo
+public class Campo implements GradeVisualizavel, CampoInterativo
 {
-    // Um gerador de números aleatórios compartilhado para uso em todo o campo.
+
     private static final Random aleatorio = new Random();
     
-    // Dimensões
-    private int profundidade, largura;
-    // Onde ficam os animais e obstáculos
+    private int profundidade;
+    
+    private int largura;
+
     private Object[][] campo;
     
-    // NOVIDADE: Matriz da Grama
-    // Armazena o nível de crescimento (0 a MAX_CRESCIMENTO_GRAMA)
-    private int[][] nivelGrama;
-    // Constantes da grama
-    private static final int MAX_CRESCIMENTO_GRAMA = 10; 
-    // Valor nutricional da grama quando comida
-    private static final int VALOR_NUTRICIONAL_GRAMA = 5; 
+    private Vegetacao[][] vegetacao;
 
     /**
      * Cria um campo de tamanho especificado.
@@ -43,17 +37,14 @@ public class Campo
         this.profundidade = profundidade;
         this.largura = largura;
         campo = new Object[profundidade][largura];
-        nivelGrama = new int[profundidade][largura];
+        vegetacao = new Vegetacao[profundidade][largura];
         
-        // Inicializa a grama já crescida
         for(int i=0; i < profundidade; i++) {
             for(int j=0; j < largura; j++) {
-                nivelGrama[i][j] = MAX_CRESCIMENTO_GRAMA;
+                vegetacao[i][j] = new Vegetacao();
             }
         }
     }
-    
-    // --- MÉTODOS DE GRAMA ---
     
     /**
      * Faz a grama crescer em todo o campo, exceto onde há obstáculos.
@@ -61,12 +52,11 @@ public class Campo
     public void crescerGrama() {
         for(int i=0; i < profundidade; i++) {
             for(int j=0; j < largura; j++) {
-                // Se não é um obstáculo (Rio/Pedra) e a grama não está cheia
                 Object obj = getObjetoEm(i, j);
                 boolean ehObstaculo = (obj instanceof Obstaculo);
                 
-                if(!ehObstaculo && nivelGrama[i][j] < MAX_CRESCIMENTO_GRAMA) {
-                    nivelGrama[i][j]++;
+                if(!ehObstaculo) {
+                    vegetacao[i][j].crescer();
                 }
             }
         }
@@ -80,19 +70,14 @@ public class Campo
         int lin = localizacao.getLinha();
         int col = localizacao.getColuna();
         
-        // Só pode comer se estiver totalmente crescida (ou quase)
-        if(nivelGrama[lin][col] >= MAX_CRESCIMENTO_GRAMA) {
-            nivelGrama[lin][col] = 0; // Zera a grama (terra seca)
-            return VALOR_NUTRICIONAL_GRAMA;
-        }
-        return 0;
+        return vegetacao[lin][col].vegetacaoEhComida();
     }
     
     /**
      * Verifica se a grama está verde (madura) nesta posição.
      */
     public boolean temGramaMadura(int linha, int coluna) {
-        return nivelGrama[linha][coluna] >= MAX_CRESCIMENTO_GRAMA;
+        return vegetacao[linha][coluna].estaMadura();
     }
     
     /**
@@ -102,13 +87,15 @@ public class Campo
     public void copiarGramaDe(Campo outroCampo) {
         for(int i=0; i < profundidade; i++) {
             for(int j=0; j < largura; j++) {
-                this.nivelGrama[i][j] = outroCampo.nivelGrama[i][j];
+                int nivelOutro = outroCampo.vegetacao[i][j].getNivelCrescimento();
+                this.vegetacao[i][j].setNivelCrescimento(nivelOutro);
             }
         }
     }
-
-    // --- MÉTODOS ORIGINAIS ABAIXO (MANTENHA IGUAL) ---
     
+    /**
+     * Limpa o campo, removendo todos os animais e obstáculos.
+     */
     public void limpar()
     {
         for(int linha = 0; linha < profundidade; linha++) {
@@ -118,31 +105,58 @@ public class Campo
         }
     }
     
+    /**
+     * Coloca um animal ou obstáculo em uma localização específica.
+     * @param animal O animal ou obstáculo a ser colocado.
+     * @param linha A coordenada vertical da localização.
+     * @param coluna A coordenada horizontal da localização.
+     */
     public void colocar(Object animal, int linha, int coluna)
     {
         colocar(animal, new Localizacao(linha, coluna));
     }
     
+    /**
+     * Coloca um animal ou obstáculo em uma localização específica.
+     * @param animal O animal ou obstáculo a ser colocado.
+     * @param localizacao A localização onde colocar o animal ou obstáculo.
+     */
     public void colocar(Object animal, Localizacao localizacao)
     {
         campo[localizacao.getLinha()][localizacao.getColuna()] = animal;
     }
     
+    /**
+     * Retorna o objeto (animal ou obstáculo) em uma localização específica.
+     * @param localizacao A localização a ser verificada.
+     * @return O objeto na localização, ou null se estiver vazia.
+     */
     public Object getObjetoEm(Localizacao localizacao)
     {
         return getObjetoEm(localizacao.getLinha(), localizacao.getColuna());
     }
     
+    /**
+     * Retorna o objeto (animal ou obstáculo) em uma localização específica.
+     * @param linha A coordenada vertical da localização.
+     * @param coluna A coordenada horizontal da localização.
+     * @return O objeto na localização, ou null se estiver vazia.
+     */
     public Object getObjetoEm(int linha, int coluna)
     {
         return campo[linha][coluna];
     }
     
+    /**
+     * Encontra uma localização adjacente livre.
+     * @param localizacao A localização central.
+     * @return Uma localização adjacente livre, ou null se não houver nenhuma.
+     */
     public Localizacao localizacaoAdjacenteLivre(Localizacao localizacao)
     {
-        Iterator adjacentes = localizacoesAdjacentes(localizacao);
+        Iterator<Localizacao> adjacentes = localizacoesAdjacentes(localizacao);
         while(adjacentes.hasNext()) {
-            Localizacao proxima = (Localizacao) adjacentes.next();
+            Localizacao proxima = adjacentes.next();
             if(campo[proxima.getLinha()][proxima.getColuna()] == null) {
                 return proxima;
             }
@@ -155,11 +169,17 @@ public class Campo
         }
     }
 
-    public Iterator localizacoesAdjacentes(Localizacao localizacao)
+    /**
+     * Retorna um iterador sobre as localizações adjacentes a uma dada localização.
+     * As localizações são retornadas em ordem aleatória.
+     * @param localizacao A localização central.
+     * @return Um iterador sobre as localizações adjacentes.
+     */
+    public Iterator<Localizacao> localizacoesAdjacentes(Localizacao localizacao)
     {
         int linha = localizacao.getLinha();
         int coluna = localizacao.getColuna();
-        LinkedList locais = new LinkedList();
+        LinkedList<Localizacao> locais = new LinkedList<Localizacao>();
         for(int deslocLinha = -1; deslocLinha <= 1; deslocLinha++) {
             int proxLinha = linha + deslocLinha;
             if(proxLinha >= 0 && proxLinha < profundidade) {
@@ -175,11 +195,19 @@ public class Campo
         return locais.iterator();
     }
 
+    /**
+     * Retorna a profundidade do campo.
+     * @return A profundidade.
+     */
     public int getProfundidade()
     {
         return profundidade;
     }
     
+    /**
+     * Retorna a largura do campo.
+     * @return A largura.
+     */
     public int getLargura()
     {
         return largura;
