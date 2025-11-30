@@ -1,126 +1,345 @@
 import java.util.List;
 import java.util.Random;
+
 /**
- * Representa um animal genérico na simulação de predador e presa.
- * Cada espécie de animal (predador ou presa) estende esta classe abstrata.
- * Cada animal tem uma idade, um nível de alimento (fome) e pode se mover,
- * reproduzir e morrer.
+ * Classe abstrata base para todos os animais na simulação.
+ * <p>
+ * Esta classe implementa comportamentos comuns a todos os animais,
+ * independentemente de serem predadores ou herbívoros. Define o ciclo
+ * de vida básico: nascer, envelhecer, se alimentar, reproduzir e morrer.
+ * </p>
+ * 
+ * <p>
+ * <strong>Hierarquia de Classes:</strong>
+ * </p>
+ * 
+ * <pre>
+ * Animal (abstrata)
+ *  ├── Predador (abstrata)
+ *  │    ├── Raposa
+ *  │    ├── Cobra
+ *  │    ├── Gavião
+ *  │    └── Urso
+ *  └── Herbivoro (abstrata)
+ *       ├── Coelho
+ *       └── Rato
+ * </pre>
+ * 
+ * <p>
+ * <strong>Características Comuns:</strong>
+ * </p>
+ * <ul>
+ * <li><strong>Idade:</strong> Incrementa a cada turno, causa morte ao atingir
+ * máximo</li>
+ * <li><strong>Fome:</strong> Diminui a cada turno, causa morte ao chegar a
+ * zero</li>
+ * <li><strong>Localização:</strong> Posição atual no campo</li>
+ * <li><strong>Reprodução:</strong> Baseada em idade, probabilidade e espaço
+ * disponível</li>
+ * <li><strong>Movimento:</strong> Busca de células adjacentes livres</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>Ciclo de Vida Padrão:</strong>
+ * </p>
+ * <ol>
+ * <li>Nasce com idade 0 ou aleatória (população inicial)</li>
+ * <li>A cada turno: {@link #incrementarIdade()} e
+ * {@link #incrementarFome()}</li>
+ * <li>Verifica se ainda está vivo após envelhecimento/fome</li>
+ * <li>Se vivo: tenta se alimentar (implementação nas subclasses)</li>
+ * <li>Se vivo: tenta reproduzir ({@link #processarReproducao})</li>
+ * <li>Se vivo: move-se ({@link #tentarMoverLivremente})</li>
+ * <li>Se morreu: é removido da simulação</li>
+ * </ol>
+ * 
+ * <p>
+ * <strong>Padrão Template Method:</strong>
+ * </p>
+ * <p>
+ * Esta classe define o esqueleto do comportamento animal, delegando
+ * detalhes específicos (idade máxima, dieta, etc.) para subclasses
+ * através de métodos abstratos.
+ * </p>
  * 
  * @author David J. Barnes e Michael Kolling
+ * @author Grupo 10
  * @version 2025-11-30
+ * @see Ator
+ * @see Predador
+ * @see Herbivoro
  */
-public abstract class Animal implements Ator{
-    private static final Random aleatorio = new Random();
-    private boolean vivo;
-    private Localizacao localizacao;
-    private int idade;
-    private int nivelAlimento;
+public abstract class Animal implements Ator {
+
+    // ========== ATRIBUTOS ESTÁTICOS ==========
 
     /**
-     * Cria um novo animal. 
-     * A idade pode ser aleatória ou zero (novo nascimento).
-     * Em ambos os casos, o nível de alimento é inicializado.
-     * @param idadeAleatoria Se verdadeiro, o animal terá uma idade aleatória.
+     * Gerador de números aleatórios compartilhado por todos os animais.
+     * <p>
+     * Usado para decisões estocásticas (reprodução, movimento, etc.).
+     * </p>
      */
-    public Animal(boolean idadeAleatoria) 
-    {
+    private static final Random aleatorio = new Random();
+
+    // ========== ATRIBUTOS DE ESTADO ==========
+
+    /**
+     * Indica se o animal está vivo na simulação.
+     */
+    private boolean vivo;
+
+    /**
+     * Posição atual do animal no campo.
+     */
+    private Localizacao localizacao;
+
+    /**
+     * Idade atual do animal em passos de simulação.
+     * <p>
+     * Incrementada a cada turno. Ao atingir {@link #idadeMaxima()},
+     * o animal morre de velhice.
+     * </p>
+     */
+    private int idade;
+
+    /**
+     * Nível atual de energia/alimento do animal.
+     * <p>
+     * Decrementado a cada turno (fome). Incrementado ao se alimentar.
+     * Ao chegar a zero, o animal morre de inanição.
+     * </p>
+     */
+    private int nivelAlimento;
+
+    // ========== CONSTRUTOR ==========
+
+    /**
+     * Cria um novo animal com estado inicial configurado.
+     * <p>
+     * <strong>Inicialização de idade:</strong>
+     * <ul>
+     * <li>idadeAleatoria = false: idade = 0 (filhote recém-nascido)</li>
+     * <li>idadeAleatoria = true: idade aleatória (população inicial
+     * estabelecida)</li>
+     * </ul>
+     * </p>
+     * <p>
+     * <strong>Inicialização de alimento:</strong>
+     * <ul>
+     * <li>Filhotes: nível padrão ({@link Configuracao#VALOR_ALIMENTAR})</li>
+     * <li>População inicial: valor aleatório (simula estados variados)</li>
+     * </ul>
+     * </p>
+     * 
+     * @param idadeAleatoria Se true, simula animal já existente; se false, simula
+     *                       nascimento
+     */
+    public Animal(boolean idadeAleatoria) {
         vivo = true;
         idade = 0;
-        if(idadeAleatoria) {
+        if (idadeAleatoria) {
             idade = aleatorio.nextInt(idadeMaxima());
         }
         localizacao = null;
 
         setNivelAlimento(Configuracao.VALOR_ALIMENTAR);
-        if(idadeAleatoria) setNivelAlimento(getAleatorio().nextInt(Configuracao.VALOR_ALIMENTAR));
+        if (idadeAleatoria)
+            setNivelAlimento(getAleatorio().nextInt(Configuracao.VALOR_ALIMENTAR));
     }
+
+    // ========== MÉTODOS DE ACESSO A RECURSOS ==========
 
     /**
      * Retorna o gerador de números aleatórios compartilhado.
-     * @return o gerador de números aleatórios
+     * <p>
+     * Acessível a subclasses para decisões estocásticas.
+     * </p>
+     * 
+     * @return Gerador Random compartilhado
      */
-    protected Random getAleatorio() { return aleatorio; }
+    protected Random getAleatorio() {
+        return aleatorio;
+    }
+
+    // ========== MÉTODOS DE ESTADO DE VIDA ==========
 
     /**
-     * Se o animal está vivo
-     * @return verdadeiro se estiver vivo, falso está morto
+     * Verifica se o animal está vivo.
+     * 
+     * @return true se vivo, false se morto
      */
-    @Override public boolean estaVivo() { return vivo; }
+    @Override
+    public boolean estaVivo() {
+        return vivo;
+    }
 
     /**
-     * Indica que o animal morreu.
-     * Define seu estado como morto e zera seu nível de alimento.
+     * Marca o animal como morto e zera seu nível de alimento.
+     * <p>
+     * Chamado quando:
+     * <ul>
+     * <li>Idade máxima é atingida</li>
+     * <li>Nível de alimento chega a zero</li>
+     * <li>Animal é predado por outro</li>
+     * <li>Não há espaço para se mover (superpopulação)</li>
+     * </ul>
+     * </p>
      */
     public void morrer() {
         vivo = false;
         nivelAlimento = 0;
     }
 
-    /**
-     * Retorna a localização do animal
-     * @return a localização do animal
-     */
-    public Localizacao getLocalizacao() { return localizacao; }
+    // ========== MÉTODOS DE LOCALIZAÇÃO ==========
 
     /**
-     * Define a localização do animal.
-     * @param linha A coordenada vertical da localização.
-     * @param coluna A coordenada horizontal da localização.
-     */
-    protected void definirLocalizacao(int linha, int coluna) {this.localizacao = new Localizacao(linha, coluna); }
-
-    /**
-     * Define a localização do animal.
-     * @param localizacao A localização do animal.
-     */
-    protected void definirLocalizacao(Localizacao localizacao) { this.localizacao = localizacao; }
-
-    /**
-     * Retorna a idade reprodutiva do animal.
-     * Cada subclasse deve implementar este método.
+     * Retorna a localização atual do animal no campo.
      * 
-     * @return A idade reprodutiva do animal.
+     * @return Posição atual do animal
      */
-    protected abstract int getIdadeReprodutiva();
+    public Localizacao getLocalizacao() {
+        return localizacao;
+    }
 
     /**
-     * Retorna a idade atual do animal.
+     * Define a localização do animal usando coordenadas diretas.
      * 
-     * @return A idade atual do animal.
+     * @param linha  Coordenada Y no campo
+     * @param coluna Coordenada X no campo
      */
-    protected int getIdade() { return idade;}
+    protected void definirLocalizacao(int linha, int coluna) {
+        this.localizacao = new Localizacao(linha, coluna);
+    }
 
     /**
-     * Um animal pode procirar se atingiu a idade de procriação.
+     * Define a localização do animal usando objeto Localizacao.
      * 
-     * @return verdadeiro se o animal puder se reproduzir, falso caso contrário.
+     * @param localizacao Nova posição do animal
      */
-    public boolean podeReproduzir() { return idade >= getIdadeReprodutiva(); }
+    protected void definirLocalizacao(Localizacao localizacao) {
+        this.localizacao = localizacao;
+    }
+
+    // ========== MÉTODOS DE IDADE E ENVELHECIMENTO ==========
 
     /**
-     * Calcula o número de nascimentos para este animal.
+     * Retorna a idade atual do animal em passos de simulação.
      * 
-     * @return O número de nascimentos (pode ser zero).
+     * @return Idade do animal
+     */
+    protected int getIdade() {
+        return idade;
+    }
+
+    /**
+     * Incrementa a idade do animal em um passo.
+     * <p>
+     * Se a idade ultrapassar {@link #idadeMaxima()}, o animal
+     * morre de velhice automaticamente.
+     * </p>
+     */
+    protected void incrementarIdade() {
+        idade++;
+        if (idade > idadeMaxima()) {
+            morrer();
+        }
+    }
+
+    // ========== MÉTODOS DE ALIMENTAÇÃO ==========
+
+    /**
+     * Retorna o nível atual de energia/alimento do animal.
+     * 
+     * @return Nível de alimento (energia restante)
+     */
+    protected int getNivelAlimento() {
+        return nivelAlimento;
+    }
+
+    /**
+     * Define o nível de energia/alimento do animal.
+     * <p>
+     * Usado ao se alimentar para restaurar energia.
+     * </p>
+     * 
+     * @param nivelAlimento Novo nível de energia
+     */
+    protected void setNivelAlimento(int nivelAlimento) {
+        this.nivelAlimento = nivelAlimento;
+    }
+
+    /**
+     * Decrementa o nível de alimento (simula fome).
+     * <p>
+     * Chamado a cada turno. Se o nível chegar a zero ou menos,
+     * o animal morre de inanição.
+     * </p>
+     */
+    protected void incrementarFome() {
+        nivelAlimento--;
+        if (nivelAlimento <= 0)
+            morrer();
+    }
+
+    // ========== MÉTODOS DE REPRODUÇÃO ==========
+
+    /**
+     * Verifica se o animal atingiu a idade reprodutiva.
+     * 
+     * @return true se pode reproduzir, false caso contrário
+     */
+    public boolean podeReproduzir() {
+        return idade >= getIdadeReprodutiva();
+    }
+
+    /**
+     * Calcula o número de filhotes nascidos neste turno.
+     * <p>
+     * <strong>Algoritmo:</strong>
+     * <ol>
+     * <li>Verifica se atingiu idade reprodutiva</li>
+     * <li>Testa probabilidade de reprodução</li>
+     * <li>Se sucesso: gera número aleatório de filhotes (1 a máximo)</li>
+     * <li>Se falha: retorna 0</li>
+     * </ol>
+     * </p>
+     * 
+     * @return Número de filhotes (0 se não reproduziu)
      */
     protected int reproduzir() {
         int nascimentos = 0;
-        if(podeReproduzir() && aleatorio.nextDouble() <= probabilidadeReproducao()) {
+        if (podeReproduzir() && aleatorio.nextDouble() <= probabilidadeReproducao()) {
             nascimentos = aleatorio.nextInt(tamanhoMaximoNinhada()) + 1;
         }
         return nascimentos;
     }
 
     /**
-     * Lógica comum de reprodução para QUALQUER animal.
-     * @param campoAtualizado O campo onde os filhos serão colocados.
-     * @param novosAnimais A lista para registrar os recém-nascidos.
+     * Processa a reprodução criando e posicionando filhotes.
+     * <p>
+     * <strong>Processo:</strong>
+     * <ol>
+     * <li>Calcula número de nascimentos</li>
+     * <li>Para cada filhote:
+     * <ul>
+     * <li>Busca localização adjacente livre</li>
+     * <li>Se encontrou: cria filhote via {@link #criarFilho()}</li>
+     * <li>Posiciona no campo e adiciona à lista</li>
+     * <li>Se não encontrou: filhote não nasce (falta de espaço)</li>
+     * </ul>
+     * </li>
+     * </ol>
+     * </p>
+     * 
+     * @param campoAtualizado Campo de destino onde filhotes serão posicionados
+     * @param novosAnimais    Lista onde filhotes serão registrados
      */
     protected void processarReproducao(CampoInterativo campoAtualizado, List<Ator> novosAnimais) {
         int nascimentos = reproduzir();
-        
+
         for (int i = 0; i < nascimentos; i++) {
             Localizacao loc = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
-            
+
             if (loc != null) {
                 Animal filhote = criarFilho();
                 novosAnimais.add(filhote);
@@ -130,13 +349,27 @@ public abstract class Animal implements Ator{
         }
     }
 
+    // ========== MÉTODOS DE MOVIMENTO ==========
+
     /**
-     * Tenta mover o animal para uma localização adjacente livre.
-     * Se não conseguir (estiver bloqueado), o animal morre (superpopulação).
+     * Tenta mover o animal para uma célula adjacente livre.
+     * <p>
+     * <strong>Comportamento:</strong>
+     * <ul>
+     * <li>Se encontrou célula livre: move-se para lá</li>
+     * <li>Se não encontrou: morre por superpopulação (sem espaço)</li>
+     * </ul>
+     * </p>
+     * <p>
+     * Usado principalmente quando não há objetivo específico de movimento
+     * (ex: predador não encontrou presa, herbívoro apenas explorando).
+     * </p>
+     * 
+     * @param campoAtualizado Campo de destino para o movimento
      */
     protected void tentarMoverLivremente(CampoInterativo campoAtualizado) {
         Localizacao novaLocalizacao = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
-        
+
         if (novaLocalizacao != null) {
             moverPara(novaLocalizacao, campoAtualizado);
         } else {
@@ -145,66 +378,58 @@ public abstract class Animal implements Ator{
     }
 
     /**
-     * Auxiliar para efetivar o movimento para um local específico.
+     * Efetiva o movimento do animal para uma localização específica.
+     * <p>
+     * Método auxiliar usado tanto para movimento livre quanto
+     * para movimento direcionado (ex: predador indo até presa).
+     * </p>
+     * 
+     * @param localizacao     Nova posição do animal
+     * @param campoAtualizado Campo onde o animal será posicionado
      */
     protected void moverPara(Localizacao localizacao, CampoInterativo campoAtualizado) {
         definirLocalizacao(localizacao);
         campoAtualizado.colocar(this, localizacao);
     }
 
+    // ========== MÉTODOS ABSTRATOS (Template Method) ==========
+
     /**
-     * Método abstrato que obriga cada espécie a definir como criar seu filhote.
+     * Cria um novo filhote da mesma espécie.
+     * <p>
+     * Cada subclasse deve implementar retornando uma nova
+     * instância de si mesma com idade zero.
+     * </p>
+     * 
+     * @return Novo animal filhote
      */
     protected abstract Animal criarFilho();
 
     /**
-     * A probabilidade de reprodução do animal.
+     * Retorna a idade mínima para reprodução.
+     * 
+     * @return Idade reprodutiva em passos de simulação
+     */
+    protected abstract int getIdadeReprodutiva();
+
+    /**
+     * Retorna a probabilidade de reprodução por turno.
+     * 
+     * @return Probabilidade entre 0.0 e 1.0
      */
     protected abstract double probabilidadeReproducao();
 
     /**
-     * O tamanho máximo da ninhada do animal.
+     * Retorna o número máximo de filhotes por ninhada.
+     * 
+     * @return Tamanho máximo da ninhada
      */
     protected abstract int tamanhoMaximoNinhada();
 
     /**
-     * Incrementa a idade.
-     * Isso pode resultar na morte do animal.
-     */
-    protected void incrementarIdade() {
-        idade++;
-        if(idade > idadeMaxima()) {
-            morrer();
-        }
-    }
-
-    /**
-     * A idade máxima do animal.
+     * Retorna a idade máxima que o animal pode atingir.
+     * 
+     * @return Idade máxima em passos de simulação
      */
     protected abstract int idadeMaxima();
-
-    /**
-     * Retorna o nível de alimento do animal.
-     * @return o nível de alimento do animal
-     */
-    protected int getNivelAlimento() {
-        return nivelAlimento;
-    }
-
-    /**
-     * Define o nível de alimento do animal.
-     * @param nivelAlimento o novo nível de alimento do animal
-     */
-    protected void setNivelAlimento(int nivelAlimento) {
-        this.nivelAlimento = nivelAlimento;
-    }
-
-    /**
-     * Incrementa o nível de fome do animal. 
-     * Se o animal ficar sem comida, ele morre.
-     */
-    protected void incrementarFome() {
-        nivelAlimento--;
-        if(nivelAlimento <= 0) morrer();
-    }
 }

@@ -6,96 +6,240 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
 /**
- * Uma simulação simples de um ecossistema.
- * Esta simulação envolve predadores e presas que interagem em um campo.
- * O campo também contém grama que cresce e pode ser comida por herbívoros.
- * O clima afeta o crescimento da grama.
- * A simulação pode ser pausada, continuada e reiniciada.
- * Os obstáculos fixos podem ser carregados de um arquivo de texto para definir o terreno.
+ * Classe principal que gerencia a simulação de um ecossistema completo.
+ * <p>
+ * Esta classe coordena todos os aspectos da simulação, incluindo:
+ * <ul>
+ * <li>Gerenciamento do ciclo de vida de predadores e presas</li>
+ * <li>Controle do sistema climático e seus efeitos</li>
+ * <li>Crescimento e regeneração de vegetação</li>
+ * <li>Obstáculos e terreno do ambiente</li>
+ * <li>Controles de pausar, continuar e reiniciar</li>
+ * <li>Visualização em tempo real das estatísticas</li>
+ * </ul>
+ * </p>
+ * 
+ * <p>
+ * <strong>Arquitetura da Simulação:</strong>
+ * </p>
+ * 
+ * <pre>
+ * Simulador (Controlador)
+ *    ├── Campo (Modelo - estado atual)
+ *    ├── Campo (Modelo - próximo estado)
+ *    ├── Desenhavel (View - interface gráfica)
+ *    ├── EstatisticasCampo (Coleta de dados)
+ *    ├── Clima (Sistema ambiental)
+ *    └── Lista de Atores (Animais)
+ * </pre>
+ * 
+ * <p>
+ * <strong>Fluxo de um Passo de Simulação:</strong>
+ * </p>
+ * <ol>
+ * <li>Preparar listas e campos auxiliares</li>
+ * <li>Aplicar obstáculos fixos no campo de destino</li>
+ * <li>Processar ações de cada animal (caçar, mover, reproduzir)</li>
+ * <li>Atualizar clima e crescimento de vegetação</li>
+ * <li>Trocar campos (atual ↔ atualizado)</li>
+ * <li>Atualizar visualização</li>
+ * </ol>
+ * 
+ * <p>
+ * <strong>Carregamento de Mapas:</strong>
+ * </p>
+ * <p>
+ * Suporta carregamento de mapas de obstáculos a partir de arquivos de texto,
+ * permitindo criação de cenários customizados com rios e pedras.
+ * </p>
  * 
  * @author David J. Barnes e Michael Kolling
  * @author Grupo 10
  * @version 2025-11-30 (traduzido e modificado)
+ * @see Campo
+ * @see Ator
+ * @see Desenhavel
+ * @see Clima
+ * @see EstatisticasCampo
  */
 public class Simulador {
 
+    // ========== ATRIBUTOS PRINCIPAIS ==========
+
+    /**
+     * Lista de todos os animais atualmente vivos na simulação.
+     */
     private List<Ator> animais;
+
+    /**
+     * Lista temporária para armazenar animais nascidos durante um passo.
+     * É mesclada com {@link #animais} ao final de cada ciclo.
+     */
     private List<Ator> novosAnimais;
+
+    /**
+     * Campo representando o estado atual da simulação (leitura).
+     */
     private Campo campo;
+
+    /**
+     * Campo sendo construído para o próximo estado (escrita).
+     * Implementa double buffering para evitar conflitos.
+     */
     private Campo campoAtualizado;
+
+    /**
+     * Contador do número de passos executados desde o início ou último reinício.
+     */
     private int passo;
+
+    /**
+     * Interface de visualização responsável por renderizar o estado da simulação.
+     */
     private Desenhavel visualizacao;
+
+    /**
+     * Sistema de clima que afeta o crescimento da vegetação.
+     */
     private Clima clima;
+
+    /**
+     * Flag indicando se a simulação está pausada.
+     */
     private boolean pausada;
+
+    /**
+     * Flag indicando se há uma simulação em execução (pausada ou não).
+     */
     private boolean emExecucao;
+
+    /**
+     * Matriz de obstáculos fixos carregados do mapa.
+     * Mantida em memória para reaplicação a cada passo.
+     */
     private Obstaculo[][] mapaFixo;
+
+    /**
+     * Objeto compartilhado entre Simulador e Visualização para coleta de
+     * estatísticas.
+     */
     private EstatisticasCampo estatisticas;
-    
-/**
-     * Constrói um campo de simulação com tamanho padrão.
+
+    // ========== CONSTRUTORES ==========
+
+    /**
+     * Constrói um simulador com dimensões padrão.
+     * <p>
+     * Utiliza valores definidos em {@link Configuracao#PROFUNDIDADE_PADRAO}
+     * e {@link Configuracao#LARGURA_PADRAO}.
+     * </p>
      */
     public Simulador() {
         this(Configuracao.PROFUNDIDADE_PADRAO, Configuracao.LARGURA_PADRAO);
     }
-    
+
     /**
-     * Cria um campo de simulação com o tamanho especificado.
-     * Este é o ponto de entrada principal que cria as dependências.
+     * Cria um simulador com dimensões customizadas.
+     * <p>
+     * Este construtor inicia a cadeia de injeção de dependências,
+     * criando primeiro o objeto de estatísticas que será compartilhado.
+     * </p>
+     * 
+     * @param profundidade Altura do campo em células
+     * @param largura      Largura do campo em células
      */
     public Simulador(int profundidade, int largura) {
-        // 1. Cria a estatística aqui para ela nascer antes de todo mundo
         this(profundidade, largura, new EstatisticasCampo());
     }
 
     /**
-     * CONSTRUTOR AUXILIAR (Privado)
-     * Serve apenas para criar a Visualização injetando a estatística que acabamos de criar.
+     * Construtor auxiliar privado para injeção de dependências.
+     * <p>
+     * Cria a visualização injetando o objeto de estatísticas compartilhado,
+     * garantindo que Simulador e Visualização trabalhem com os mesmos dados.
+     * </p>
+     * 
+     * @param profundidade              Altura do campo
+     * @param largura                   Largura do campo
+     * @param estatisticasCompartilhada Objeto de estatísticas a ser compartilhado
      */
     private Simulador(int profundidade, int largura, EstatisticasCampo estatisticasCompartilhada) {
-        this(profundidade, largura, 
-             new VisualizacaoSimulador(profundidade, largura, estatisticasCompartilhada), 
-             estatisticasCompartilhada);
+        this(profundidade, largura,
+                new VisualizacaoSimulador(profundidade, largura, estatisticasCompartilhada),
+                estatisticasCompartilhada);
     }
 
     /**
-     * O "Construtor Mestre" (Master Constructor).
-     * Agora ele recebe tudo pronto e apenas atribui.
+     * Construtor mestre que recebe todas as dependências prontas.
+     * <p>
+     * Este é o construtor final da cadeia, responsável por:
+     * <ul>
+     * <li>Validar dimensões do campo</li>
+     * <li>Inicializar estruturas de dados</li>
+     * <li>Configurar visualização e cores</li>
+     * <li>Carregar mapa de obstáculos</li>
+     * <li>Popular o campo inicial</li>
+     * <li>Configurar controles da interface</li>
+     * </ul>
+     * </p>
+     * 
+     * @param profundidade Altura do campo
+     * @param largura      Largura do campo
+     * @param visualizacao Interface de visualização já configurada
+     * @param estatisticas Objeto de estatísticas já configurado
      */
-    public Simulador(int profundidade, int largura, Desenhavel visualizacao, EstatisticasCampo estatisticas) {   
-        // Verifica se as dimensões são válidas
-        if(largura <= 0 || profundidade <= 0) {
+    public Simulador(int profundidade, int largura, Desenhavel visualizacao, EstatisticasCampo estatisticas) {
+        // Valida dimensões
+        if (largura <= 0 || profundidade <= 0) {
             System.out.println("As dimensões devem ser maiores que zero.");
             System.out.println("Usando valores padrão.");
             profundidade = Configuracao.PROFUNDIDADE_PADRAO;
             largura = Configuracao.LARGURA_PADRAO;
         }
-        
-        // --- INJEÇÃO DE DEPENDÊNCIA ---
-        this.estatisticas = estatisticas; // Agora o Simulador tem a MESMA instância da View!
+
+        this.estatisticas = estatisticas;
         this.visualizacao = visualizacao;
-        
-        // Inicializa listas e campos
+
         animais = new ArrayList<Ator>();
         novosAnimais = new ArrayList<Ator>();
         campo = new Campo(profundidade, largura);
         campoAtualizado = new Campo(profundidade, largura);
-        
+
         definirCores();
-        
-        // Inicializa clima e estado da simulação
+
         this.clima = new Clima(50);
         this.pausada = false;
         this.emExecucao = false;
-        
-        // Carrega o mapa de obstáculos
+
         carregarMapa("mapa.txt");
-        
+
         reiniciar();
-        
-        // Configura os botões da interface
+
         configurarInterface();
     }
-    
+
+    // ========== MÉTODOS DE CONFIGURAÇÃO ==========
+
+    /**
+     * Define o mapeamento de cores para cada tipo de entidade.
+     * <p>
+     * Cores configuradas:
+     * <ul>
+     * <li>Raposa → Azul</li>
+     * <li>Coelho → Laranja</li>
+     * <li>Rato → Magenta</li>
+     * <li>Cobra → Verde</li>
+     * <li>Gavião → Vermelho</li>
+     * <li>Urso → Preto</li>
+     * <li>Rio → Ciano</li>
+     * <li>Pedra → Cinza escuro</li>
+     * </ul>
+     * </p>
+     * <p>
+     * Também configura obstáculos para serem ignorados nas estatísticas
+     * populacionais.
+     * </p>
+     */
     private void definirCores() {
         this.visualizacao.definirCor(Raposa.class, Color.blue);
         this.visualizacao.definirCor(Coelho.class, Color.orange);
@@ -113,242 +257,18 @@ public class Simulador {
     }
 
     /**
-     * Pausa a simulação em execução.
-     * A simulação pode ser continuada posteriormente com continuar().
-     */
-    private void pausar() {
-        if (emExecucao && !pausada) {
-            pausada = true;
-        } else if (pausada) {
-            // Simulação já está pausada
-        } else {
-            // Não há simulação em execução para pausar
-        }
-    }
-    
-    /**
-     * Continua a simulação pausada.
-     */
-    public void continuar() {
-        if (pausada) {
-            pausada = false;
-        } else if (emExecucao) {
-            // Simulação já está em execução
-        } else {
-            // Não há simulação pausada para continuar
-        }
-    }
-    
-    /**
-     * Verifica se a simulação está pausada.
-     * @return true se a simulação estiver pausada, false caso contrário.
-     */
-    public boolean estaPausada() {
-        return pausada;
-    }
-    
-    /**
-     * Verifica se a simulação está em execução (pausada ou não).
-     * @return true se a simulação estiver em execução.
-     */
-    public boolean estaEmExecucao() {
-        return emExecucao;
-    }
-    
-    /**
-     * Reinicia completamente a simulação para o estado inicial.
-     * Remove todos os animais, limpa o campo, reinicia o clima e reseta contadores.
-     */
-    public void reiniciar()
-    {
-        passo = 0;
-        // Limpa todas as listas e campos
-        animais.clear();
-        novosAnimais.clear();
-        
-        // Limpa os campos de simulação
-        campo.limpar();
-        campoAtualizado.limpar();
-        // Reinicia o clima
-        if (clima != null) {
-            clima.reiniciar();
-        }
-        // Define o estado como não pausado
-        pausada = false;
-        visualizacao.setTextoBotaoPausa("Pausar");
-        // Aplica obstáculos fixos e popula o campo
-        aplicarObstaculos(campo);
-        new Populador().popular(campo, animais);
-        // Reinicia a visualização e mostra o estado inicial
-        visualizacao.reiniciar();
-        visualizacao.mostrarStatus(passo, campo);
-    }
-    
-    /**
-     * Retorna o sistema de clima da simulação.
-     * @return O objeto Clima
-     */
-    public Clima getClima() {
-        return clima;
-    }
-    
-    /**
-     * Define um novo sistema de clima para a simulação.
-     * @param clima O novo sistema de clima
-     */
-    public void setClima(Clima clima) {
-        this.clima = clima;
-    }
-    
-    /**
-     * Executa a simulação a partir do estado atual pelo número de passos indicado.
-     * Interrompe antes se a simulação deixar de ser viável.
-     * Respeita o estado de pausa da simulação.
-     * 
-     * @param numPassos Quantidade de passos a simular.
-     */
-    public void simular(int numPassos)
-    {
-        emExecucao = true;
-        
-        while(emExecucao) {
-            
-            if (passo >= numPassos) {
-                if (!pausada) {
-                    pausar();
-                    visualizacao.setTextoBotaoPausa("Continuar");
-                }
-            }
-
-            if (!visualizacao.ehViavel(campo)) {
-                if (!pausada) {
-                    pausar(); 
-                    visualizacao.setTextoBotaoPausa("Continuar"); 
-                }
-            }
-
-            while (pausada) {
-                try {
-                    Thread.sleep(100); 
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            
-            simularUmPasso();
-            
-            try { Thread.sleep(50); } catch (Exception e) {}
-        }
-    }
-    
-    /**
-     * Simula um único passo da simulação.
-     * Atualiza o clima, processa o ciclo de vida dos animais e atualiza a visualização.
-     */
-    public void simularUmPasso()
-    {
-        passo++;
-        prepararNovosAnimais();
-        prepararObstaculos();
-        processarCicloDeVidaAnimais();
-        processarAmbienteEClima();
-        trocarCampos();
-        visualizacao.mostrarStatus(passo, campo);
-    }
-
-    /**
-     * Limpa a lista de nascimentos e aplica obstáculos fixos no campo de destino.
-     */
-    private void prepararNovosAnimais() {
-        novosAnimais.clear();
-    }
-    /**
-     * Aplica os obstáculos fixos no campo atualizado.
-     */
-    private void prepararObstaculos() {
-        aplicarObstaculos(campoAtualizado);
-    }
-
-    /**
-     * Itera sobre todos os animais: faz agir, remove os mortos e registra os nascimentos.
-     */
-    private void processarCicloDeVidaAnimais() {
-        Iterator<Ator> iter = animais.iterator();
-        while(iter.hasNext()) {
-            Ator ator = iter.next();
-            if(ator.estaVivo()) {
-                ator.agir(campo, campoAtualizado, novosAnimais);
-            }
-            else {
-                iter.remove();
-            }
-        }
-        // Adiciona os filhotes nascidos neste turno
-        animais.addAll(novosAnimais);
-    }
-
-    /**
-     * Gerencia o crescimento da grama e as mudanças climáticas.
-     */
-    private void processarAmbienteEClima() {
-        campoAtualizado.copiarGramaDe(campo);
-        
-        // Se não houver sistema de clima, apenas cresce a grama normalmente
-        if (clima == null) {
-            campoAtualizado.crescerGrama();
-            return;
-        }
-
-        // Atualiza clima e aplica efeitos
-        clima.atualizar();
-        campoAtualizado.crescerGrama();
-        
-        // Se chover, a grama cresce uma segunda vez (dobro da velocidade)
-        if(clima.estaChuvoso()) {
-            campoAtualizado.crescerGrama();
-        }
-
-        // Atualiza a interface com o estado do clima
-        String textoClima = clima.estaChuvoso() ? "Clima: CHUVOSO (Crescimento Rápido)" : "Clima: NORMAL";
-        visualizacao.setInfoClima(textoClima, clima.estaChuvoso());
-    }
-
-    /**
-     * Troca as referências dos campos para o próximo passo.
-     */
-    private void trocarCampos() {
-        Campo temp = campo;
-        campo = campoAtualizado;
-        campoAtualizado = temp;
-        campoAtualizado.limpar();
-    }
-    
-    /**
-     * Retorna o passo atual da simulação.
-     * @return O número do passo atual
-     */
-    public int getPasso() {
-        return passo;
-    }
-    
-    /**
-     * Retorna a lista de animais atualmente vivos.
-     * @return Lista de atores
-     */
-    public List<Ator> getAnimais() {
-        return new ArrayList<>(animais);
-    }
-    
-    /**
-     * Retorna o campo atual da simulação.
-     * @return O campo atual
-     */
-    public Campo getCampo() {
-        return campo;
-    }
-
-    /**
-     * Configura os listeners dos botões usando Classes Anônimas.
+     * Configura os listeners dos botões da interface gráfica.
+     * <p>
+     * Botões configurados:
+     * <ul>
+     * <li><strong>Pausar/Continuar:</strong> Alterna entre pausar e continuar a
+     * simulação</li>
+     * <li><strong>Reiniciar:</strong> Reseta a simulação para o estado inicial</li>
+     * </ul>
+     * </p>
+     * <p>
+     * Utiliza classes anônimas para implementar os ActionListeners.
+     * </p>
      */
     private void configurarInterface() {
         visualizacao.setAcaoPausar(new ActionListener() {
@@ -363,39 +283,304 @@ public class Simulador {
                 }
             }
         });
-        // Listener para o botão Reiniciar
+
         visualizacao.setAcaoReiniciar(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                pausar(); 
-                
-                try { Thread.sleep(200); } catch (InterruptedException ex) {}
-                
+                pausar();
+
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException ex) {
+                }
+
                 reiniciar();
-                
+
                 visualizacao.setTextoBotaoPausa("Pausar");
             }
         });
     }
 
+    // ========== MÉTODOS DE CONTROLE DE EXECUÇÃO ==========
+
     /**
-     * Carrega o mapa e ajusta a simulação se necessário.
+     * Pausa a simulação em execução.
+     * <p>
+     * A simulação pode ser retomada posteriormente com {@link #continuar()}.
+     * Se a simulação já estiver pausada ou não estiver em execução, não há efeito.
+     * </p>
+     */
+    private void pausar() {
+        if (emExecucao && !pausada) {
+            pausada = true;
+        }
+    }
+
+    /**
+     * Retoma uma simulação pausada.
+     * <p>
+     * Se a simulação não estiver pausada, não há efeito.
+     * </p>
+     */
+    public void continuar() {
+        if (pausada) {
+            pausada = false;
+        }
+    }
+
+    /**
+     * Verifica se a simulação está pausada.
+     * 
+     * @return true se pausada, false caso contrário
+     */
+    public boolean estaPausada() {
+        return pausada;
+    }
+
+    /**
+     * Verifica se há uma simulação em execução (pausada ou não).
+     * 
+     * @return true se em execução, false caso contrário
+     */
+    public boolean estaEmExecucao() {
+        return emExecucao;
+    }
+
+    /**
+     * Reinicia completamente a simulação para o estado inicial.
+     * <p>
+     * <strong>Operações realizadas:</strong>
+     * <ol>
+     * <li>Reseta contador de passos para 0</li>
+     * <li>Limpa todas as listas de animais</li>
+     * <li>Limpa ambos os campos (atual e atualizado)</li>
+     * <li>Reinicia o sistema de clima</li>
+     * <li>Remove estado de pausa</li>
+     * <li>Aplica obstáculos fixos do mapa</li>
+     * <li>Popula o campo com animais iniciais</li>
+     * <li>Atualiza visualização</li>
+     * </ol>
+     * </p>
+     */
+    public void reiniciar() {
+        passo = 0;
+
+        animais.clear();
+        novosAnimais.clear();
+
+        campo.limpar();
+        campoAtualizado.limpar();
+
+        if (clima != null) {
+            clima.reiniciar();
+        }
+
+        pausada = false;
+        visualizacao.setTextoBotaoPausa("Pausar");
+
+        aplicarObstaculos(campo);
+        new Populador().popular(campo, animais);
+
+        visualizacao.reiniciar();
+        visualizacao.mostrarStatus(passo, campo);
+    }
+
+    /**
+     * Executa a simulação pelo número especificado de passos.
+     * <p>
+     * <strong>Comportamento:</strong>
+     * <ul>
+     * <li>Respeita comandos de pausa durante a execução</li>
+     * <li>Para automaticamente se a simulação se tornar inviável</li>
+     * <li>Para ao atingir o número de passos solicitado</li>
+     * <li>Aguarda 50ms entre cada passo para visualização</li>
+     * </ul>
+     * </p>
+     * 
+     * @param numPassos Número de passos a executar
+     */
+    public void simular(int numPassos) {
+        emExecucao = true;
+
+        while (emExecucao) {
+
+            if (passo >= numPassos) {
+                if (!pausada) {
+                    pausar();
+                    visualizacao.setTextoBotaoPausa("Continuar");
+                }
+            }
+
+            if (!visualizacao.ehViavel(campo)) {
+                if (!pausada) {
+                    pausar();
+                    visualizacao.setTextoBotaoPausa("Continuar");
+                }
+            }
+
+            while (pausada) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            simularUmPasso();
+
+            try {
+                Thread.sleep(50);
+            } catch (Exception e) {
+            }
+        }
+    }
+
+    // ========== MÉTODOS DE SIMULAÇÃO ==========
+
+    /**
+     * Simula um único passo da simulação.
+     * <p>
+     * <strong>Sequência de operações:</strong>
+     * <ol>
+     * <li>Incrementa contador de passos</li>
+     * <li>Prepara listas auxiliares</li>
+     * <li>Aplica obstáculos no campo de destino</li>
+     * <li>Processa ações de todos os animais</li>
+     * <li>Atualiza clima e vegetação</li>
+     * <li>Troca campos (double buffering)</li>
+     * <li>Atualiza visualização</li>
+     * </ol>
+     * </p>
+     */
+    public void simularUmPasso() {
+        passo++;
+        prepararNovosAnimais();
+        prepararObstaculos();
+        processarCicloDeVidaAnimais();
+        processarAmbienteEClima();
+        trocarCampos();
+        visualizacao.mostrarStatus(passo, campo);
+    }
+
+    /**
+     * Limpa a lista de animais nascidos do passo anterior.
+     * <p>
+     * Preparação para receber novos nascimentos no passo atual.
+     * </p>
+     */
+    private void prepararNovosAnimais() {
+        novosAnimais.clear();
+    }
+
+    /**
+     * Aplica obstáculos fixos no campo de destino.
+     * <p>
+     * Necessário porque o campo atualizado é limpo a cada ciclo.
+     * </p>
+     */
+    private void prepararObstaculos() {
+        aplicarObstaculos(campoAtualizado);
+    }
+
+    /**
+     * Processa o ciclo de vida de todos os animais.
+     * <p>
+     * <strong>Para cada animal:</strong>
+     * <ol>
+     * <li>Verifica se está vivo</li>
+     * <li>Se vivo: executa suas ações (caçar, mover, reproduzir)</li>
+     * <li>Se morto: remove da lista</li>
+     * </ol>
+     * </p>
+     * <p>
+     * Ao final, adiciona todos os filhotes nascidos neste turno à lista principal.
+     * </p>
+     */
+    private void processarCicloDeVidaAnimais() {
+        Iterator<Ator> iter = animais.iterator();
+        while (iter.hasNext()) {
+            Ator ator = iter.next();
+            if (ator.estaVivo()) {
+                ator.agir(campo, campoAtualizado, novosAnimais);
+            } else {
+                iter.remove();
+            }
+        }
+
+        animais.addAll(novosAnimais);
+    }
+
+    /**
+     * Gerencia o ambiente: clima e crescimento de vegetação.
+     * <p>
+     * <strong>Processo:</strong>
+     * <ol>
+     * <li>Copia estado da vegetação do campo atual</li>
+     * <li>Se houver sistema de clima: atualiza estado climático</li>
+     * <li>Faz vegetação crescer uma vez</li>
+     * <li>Se estiver chovendo: cresce novamente (crescimento dobrado)</li>
+     * <li>Atualiza interface com informações climáticas</li>
+     * </ol>
+     * </p>
+     */
+    private void processarAmbienteEClima() {
+        campoAtualizado.copiarGramaDe(campo);
+
+        if (clima == null) {
+            campoAtualizado.crescerGrama();
+            return;
+        }
+
+        clima.atualizar();
+        campoAtualizado.crescerGrama();
+
+        if (clima.estaChuvoso()) {
+            campoAtualizado.crescerGrama();
+        }
+
+        String textoClima = clima.estaChuvoso() ? "Clima: CHUVOSO (Crescimento Rápido)" : "Clima: NORMAL";
+        visualizacao.setInfoClima(textoClima, clima.estaChuvoso());
+    }
+
+    /**
+     * Realiza a troca de referências entre campos (double buffering).
+     * <p>
+     * O campo atualizado se torna o atual, e o antigo atual é limpo
+     * para servir como buffer de escrita no próximo passo.
+     * </p>
+     */
+    private void trocarCampos() {
+        Campo temp = campo;
+        campo = campoAtualizado;
+        campoAtualizado = temp;
+        campoAtualizado.limpar();
+    }
+
+    // ========== MÉTODOS DE CARREGAMENTO DE MAPA ==========
+
+    /**
+     * Carrega um mapa de obstáculos de um arquivo de texto.
+     * <p>
+     * Se as dimensões do mapa forem diferentes das atuais,
+     * redimensiona toda a simulação automaticamente.
+     * </p>
+     * 
+     * @param caminhoArquivo Caminho do arquivo de mapa (ex: "mapa.txt")
      */
     private void carregarMapa(String caminhoArquivo) {
-        // 1. Delegamos a leitura para a classe especialista (CarregadorMapa)
         CarregadorMapa carregador = new CarregadorMapa();
         Obstaculo[][] novoMapa = carregador.carregarObstaculos(caminhoArquivo);
 
-        if (novoMapa == null) return; // Se falhou, mantém o atual
+        if (novoMapa == null)
+            return;
 
         this.mapaFixo = novoMapa;
 
-        // 2. Verificamos se as dimensões mudaram
         int novaProfundidade = novoMapa.length;
         int novaLargura = novoMapa[0].length;
-        
-        boolean dimensoesMudaram = (novaProfundidade != campo.getProfundidade()) || 
-                                   (novaLargura != campo.getLargura());
+
+        boolean dimensoesMudaram = (novaProfundidade != campo.getProfundidade()) ||
+                (novaLargura != campo.getLargura());
 
         if (dimensoesMudaram) {
             redimensionarSimulacao(novaProfundidade, novaLargura);
@@ -403,33 +588,48 @@ public class Simulador {
     }
 
     /**
-     * Método auxiliar privado para lidar com a complexidade de recriar o mundo
-     * quando o tamanho do mapa muda.
+     * Redimensiona toda a simulação para novas dimensões.
+     * <p>
+     * <strong>Operações realizadas:</strong>
+     * <ol>
+     * <li>Recria ambos os campos com novo tamanho</li>
+     * <li>Fecha a visualização antiga</li>
+     * <li>Cria nova visualização com dimensões corretas</li>
+     * <li>Reaplica configurações (cores e controles)</li>
+     * </ol>
+     * </p>
+     * 
+     * @param novaProfundidade Nova altura do campo
+     * @param novaLargura      Nova largura do campo
      */
     private void redimensionarSimulacao(int novaProfundidade, int novaLargura) {
         System.out.println("Redimensionando simulação para: " + novaProfundidade + "x" + novaLargura);
-        
-        // Recria a lógica
+
         campo = new Campo(novaProfundidade, novaLargura);
         campoAtualizado = new Campo(novaProfundidade, novaLargura);
-        
-        // Recria a interface gráfica
+
         if (visualizacao != null) {
             visualizacao.fechar();
             visualizacao = new VisualizacaoSimulador(novaProfundidade, novaLargura, estatisticas);
-            
-            // Re-aplica as configurações necessárias na nova janela
+
             definirCores();
             configurarInterface();
         }
     }
 
     /**
-     * Copia os obstáculos fixos para o campo destino.
+     * Copia obstáculos fixos da matriz de mapa para o campo destino.
+     * <p>
+     * Percorre toda a matriz de obstáculos e coloca cada um na posição
+     * correspondente do campo, se houver obstáculo definido.
+     * </p>
+     * 
+     * @param destino Campo onde os obstáculos serão aplicados
      */
     private void aplicarObstaculos(Campo destino) {
-        if (mapaFixo == null) return;
-        
+        if (mapaFixo == null)
+            return;
+
         for (int i = 0; i < destino.getProfundidade(); i++) {
             for (int j = 0; j < destino.getLargura(); j++) {
                 if (mapaFixo[i][j] != null) {
@@ -437,5 +637,55 @@ public class Simulador {
                 }
             }
         }
+    }
+
+    // ========== GETTERS ==========
+
+    /**
+     * Retorna o número do passo atual da simulação.
+     * 
+     * @return Contador de passos desde o início ou último reinício
+     */
+    public int getPasso() {
+        return passo;
+    }
+
+    /**
+     * Retorna uma cópia da lista de animais vivos.
+     * <p>
+     * Retorna uma nova lista para evitar modificações externas.
+     * </p>
+     * 
+     * @return Lista (cópia) de todos os atores vivos
+     */
+    public List<Ator> getAnimais() {
+        return new ArrayList<>(animais);
+    }
+
+    /**
+     * Retorna o campo atual da simulação.
+     * 
+     * @return Campo em uso no passo atual
+     */
+    public Campo getCampo() {
+        return campo;
+    }
+
+    /**
+     * Retorna o sistema de clima da simulação.
+     * 
+     * @return Objeto controlador do clima
+     */
+    public Clima getClima() {
+        return clima;
+    }
+
+    /**
+     * Define um novo sistema de clima para a simulação.
+     * 
+     * @param clima Novo objeto de clima a ser usado
+     */
+    public void setClima(Clima clima) {
+        this.clima = clima;
     }
 }
