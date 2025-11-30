@@ -29,27 +29,39 @@ public class Simulador {
     private boolean pausada;
     private boolean emExecucao;
     private Obstaculo[][] mapaFixo;
+    private EstatisticasCampo estatisticas;
     
-    /**
+/**
      * Constrói um campo de simulação com tamanho padrão.
      */
-    public Simulador()
-    {
+    public Simulador() {
         this(Configuracao.PROFUNDIDADE_PADRAO, Configuracao.LARGURA_PADRAO);
     }
     
-    public Simulador(int profundidade, int largura)
-    {
-        this(profundidade, largura, new VisualizacaoSimulador(profundidade, largura));
+    /**
+     * Cria um campo de simulação com o tamanho especificado.
+     * Este é o ponto de entrada principal que cria as dependências.
+     */
+    public Simulador(int profundidade, int largura) {
+        // 1. Cria a estatística aqui para ela nascer antes de todo mundo
+        this(profundidade, largura, new EstatisticasCampo());
     }
 
     /**
-     * Cria um campo de simulação com o tamanho especificado.
-     * @param profundidade Profundidade do campo. Deve ser maior que zero.
-     * @param largura Largura do campo. Deve ser maior que zero.
+     * CONSTRUTOR AUXILIAR (Privado)
+     * Serve apenas para criar a Visualização injetando a estatística que acabamos de criar.
      */
-    public Simulador(int profundidade, int largura, Desenhavel visualizacao)
-    {   
+    private Simulador(int profundidade, int largura, EstatisticasCampo estatisticasCompartilhada) {
+        this(profundidade, largura, 
+             new VisualizacaoSimulador(profundidade, largura, estatisticasCompartilhada), 
+             estatisticasCompartilhada);
+    }
+
+    /**
+     * O "Construtor Mestre" (Master Constructor).
+     * Agora ele recebe tudo pronto e apenas atribui.
+     */
+    public Simulador(int profundidade, int largura, Desenhavel visualizacao, EstatisticasCampo estatisticas) {   
         // Verifica se as dimensões são válidas
         if(largura <= 0 || profundidade <= 0) {
             System.out.println("As dimensões devem ser maiores que zero.");
@@ -57,22 +69,29 @@ public class Simulador {
             profundidade = Configuracao.PROFUNDIDADE_PADRAO;
             largura = Configuracao.LARGURA_PADRAO;
         }
+        
+        // --- INJEÇÃO DE DEPENDÊNCIA ---
+        this.estatisticas = estatisticas; // Agora o Simulador tem a MESMA instância da View!
+        this.visualizacao = visualizacao;
+        
         // Inicializa listas e campos
         animais = new ArrayList<Ator>();
         novosAnimais = new ArrayList<Ator>();
         campo = new Campo(profundidade, largura);
         campoAtualizado = new Campo(profundidade, largura);
-        // Configura a visualização
-        this.visualizacao = visualizacao;
+        
         definirCores();
+        
         // Inicializa clima e estado da simulação
         this.clima = new Clima(50);
         this.pausada = false;
         this.emExecucao = false;
+        
         // Carrega o mapa de obstáculos
         carregarMapa("mapa.txt");
         
         reiniciar();
+        
         // Configura os botões da interface
         configurarInterface();
     }
@@ -84,6 +103,13 @@ public class Simulador {
         this.visualizacao.definirCor(Cobra.class, Color.GREEN);
         this.visualizacao.definirCor(Gaviao.class, Color.RED);
         this.visualizacao.definirCor(Urso.class, Color.BLACK);
+
+        visualizacao.definirCor(Obstaculo.RIO, Color.CYAN);
+        visualizacao.definirCor(Obstaculo.PEDRA, Color.DARK_GRAY);
+
+        if (visualizacao instanceof VisualizacaoSimulador) {
+            ((VisualizacaoSimulador) visualizacao).adicionarClasseIgnorada(Obstaculo.class);
+        }
     }
 
     /**
@@ -390,7 +416,7 @@ public class Simulador {
         // Recria a interface gráfica
         if (visualizacao != null) {
             visualizacao.fechar();
-            visualizacao = new VisualizacaoSimulador(novaProfundidade, novaLargura);
+            visualizacao = new VisualizacaoSimulador(novaProfundidade, novaLargura, estatisticas);
             
             // Re-aplica as configurações necessárias na nova janela
             definirCores();

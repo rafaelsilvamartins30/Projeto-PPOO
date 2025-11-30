@@ -9,25 +9,25 @@ import java.awt.event.ActionListener;
  */
 public interface Desenhavel {
     /**
-     * Define a cor para uma determinada classe de animal.
+     * Define a cor a ser usada para uma classe específica de animal ou objeto.
      * @param classeAnimal 
      * @param cor
      */
-    void definirCor(Class<?> classeAnimal, Color cor);
+    void definirCor(Object chave, Color cor);
 
     /**
-     * Mostra o status atual do campo na visualização.
+     * Mostra o status atual da simulação.
      * @param passo
      * @param campo
      */
-    void mostrarStatus(int passo, Campo campo);
+    void mostrarStatus(int passo, GradeVisualizavel campo);
 
     /**
      * Verifica se a simulação é viável com base no estado atual do campo.
      * @param campo
      * @return
      */
-    boolean ehViavel(Campo campo);
+    boolean ehViavel(GradeVisualizavel campo);
 
     /**
      * Reinicia a visualização da simulação.
