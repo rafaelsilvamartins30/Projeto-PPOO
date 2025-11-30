@@ -11,9 +11,10 @@ import java.util.Random;
  * 
  * 
  * @author David J. Barnes e Michael Kolling
- * @version 2002-04-23
+ * @author Grupo 10 - PPOO
+ * @version 2025-11
  */
-public class Campo implements GradeVisualizavel
+public class Campo implements GradeVisualizavel, CampoInterativo
 {
 
     private static final Random aleatorio = new Random();

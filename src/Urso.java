@@ -34,7 +34,7 @@ public class Urso extends Predador {
      * @param novosUrsos A lista para adicionar novos ursos nascidos.
      */
     @Override
-    public void agir(Campo campoAtual, Campo campoAtualizado, List<Ator> novosUrsos) {
+    public void agir(CampoInterativo campoAtual, CampoInterativo campoAtualizado, List<Ator> novosUrsos) {
         super.agir(campoAtual, campoAtualizado, novosUrsos);
         if (estaVivo()) {
             pescar(campoAtual);
@@ -55,7 +55,7 @@ public class Urso extends Predador {
      * 
      * @param campo representando o campo atual.
      */
-    private void pescar(Campo campo) {
+    private void pescar(CampoInterativo campo) {
         Iterator<Localizacao> adjacentes = campo.localizacoesAdjacentes(getLocalizacao());
         while (adjacentes.hasNext()) {
             Localizacao onde = adjacentes.next();

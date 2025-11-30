@@ -115,7 +115,7 @@ public abstract class Animal implements Ator{
      * @param campoAtualizado O campo onde os filhos serão colocados.
      * @param novosAnimais A lista para registrar os recém-nascidos.
      */
-    protected void processarReproducao(Campo campoAtualizado, List<Ator> novosAnimais) {
+    protected void processarReproducao(CampoInterativo campoAtualizado, List<Ator> novosAnimais) {
         int nascimentos = reproduzir();
         
         for (int i = 0; i < nascimentos; i++) {
@@ -134,7 +134,7 @@ public abstract class Animal implements Ator{
      * Tenta mover o animal para uma localização adjacente livre.
      * Se não conseguir (estiver bloqueado), o animal morre (superpopulação).
      */
-    protected void tentarMoverLivremente(Campo campoAtualizado) {
+    protected void tentarMoverLivremente(CampoInterativo campoAtualizado) {
         Localizacao novaLocalizacao = campoAtualizado.localizacaoAdjacenteLivre(getLocalizacao());
         
         if (novaLocalizacao != null) {
@@ -147,7 +147,7 @@ public abstract class Animal implements Ator{
     /**
      * Auxiliar para efetivar o movimento para um local específico.
      */
-    protected void moverPara(Localizacao localizacao, Campo campoAtualizado) {
+    protected void moverPara(Localizacao localizacao, CampoInterativo campoAtualizado) {
         definirLocalizacao(localizacao);
         campoAtualizado.colocar(this, localizacao);
     }
