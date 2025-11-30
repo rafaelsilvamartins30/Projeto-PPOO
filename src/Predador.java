@@ -36,7 +36,7 @@ public abstract class Predador extends Animal {
      * @param novosPredadores A lista para adicionar novos predadores nascidos.
      */
     @Override
-    public void agir(Campo campoAtual, Campo campoAtualizado, List<Ator> novosPredadores) {
+    public void agir(CampoInterativo campoAtual, CampoInterativo campoAtualizado, List<Ator> novosPredadores) {
         incrementarIdade();
         incrementarFome();
         if (estaVivo()) {
@@ -51,7 +51,7 @@ public abstract class Predador extends Animal {
      * 2. Se achou, move para o local da presa.
      * 3. Se NÃO achou, move livremente (como qualquer animal).
      */
-    private void processarCacaMovimento(Campo campoAtual, Campo campoAtualizado) {
+    private void processarCacaMovimento(CampoInterativo campoAtual, CampoInterativo campoAtualizado) {
         Localizacao locPresa = cacar(campoAtual, getLocalizacao());
         
         if (locPresa != null) {
@@ -67,7 +67,7 @@ public abstract class Predador extends Animal {
      * Apenas identifica ONDE está a comida e se alimenta.
      * NÃO move o predador.
      */
-    private Localizacao cacar(Campo campo, Localizacao localizacao) {
+    private Localizacao cacar(CampoInterativo campo, Localizacao localizacao) {
         Iterator<Localizacao> adjacentes = campo.localizacoesAdjacentes(localizacao);
         while (adjacentes.hasNext()) {
             Localizacao onde = adjacentes.next();

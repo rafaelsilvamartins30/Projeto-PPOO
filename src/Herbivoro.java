@@ -23,7 +23,7 @@ public abstract class Herbivoro extends Animal {
      * @param novosHerbivoros Uma lista para armazenar os novos herbívoros nascidos.
      */
     @Override
-    public void agir(Campo campoAtual, Campo campoAtualizado, List<Ator> novosHerbivoros) {
+    public void agir(CampoInterativo campoAtual, CampoInterativo campoAtualizado, List<Ator> novosHerbivoros) {
         incrementarIdade();
         incrementarFome();
         
@@ -49,7 +49,7 @@ public abstract class Herbivoro extends Animal {
      * Tenta comer grama na localização atual.
      * @param campo O campo onde o herbívoro está localizado.
      */
-    private void tentarComerGrama(Campo campo) {
+    private void tentarComerGrama(CampoInterativo campo) {
         int comida = campo.comerGrama(getLocalizacao());
         if (comida > 0) {
             setNivelAlimento(getNivelAlimento() + comida);
